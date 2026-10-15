@@ -1,13 +1,17 @@
 package com.chiti.phonemic.audio
 
 import android.media.*
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import android.os.Process
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlin.math.*
 
 /** Blocking platform I/O on a dedicated audio worker; no UI or Flow updates in the PCM loop. */
-class JavaAudioEngine : AudioEngine {
+class JavaAudioEngine(private val context: Context) : AudioEngine {
     private val state = MutableStateFlow<AudioState>(AudioState.Idle)
     override val audioState = state.asStateFlow()
     private val rms = MutableStateFlow(-96f)
@@ -27,6 +31,10 @@ class JavaAudioEngine : AudioEngine {
     override suspend fun start(outputDeviceName: String, initialGainDb: Float): Boolean {
         if (running) return true
         state.value = AudioState.Connecting
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            state.value = AudioState.Error("Microphone permission is required")
+            return false
+        }
         return try {
             val rate = 48000
             val inputBytes = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)

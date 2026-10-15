@@ -67,7 +67,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         } catch (_: LinkageError) { candidate?.stop(); candidate = null }
           catch (_: Exception) { candidate?.stop(); candidate = null }
         if (candidate == null) {
-            candidate = JavaAudioEngine()
+            candidate = JavaAudioEngine(context)
             candidate.setVoicePreset(preset)
             if (!candidate.start(deviceName, gain)) {
                 candidate.stop(); audioManager.abandonAudioFocusRequest(focus)
