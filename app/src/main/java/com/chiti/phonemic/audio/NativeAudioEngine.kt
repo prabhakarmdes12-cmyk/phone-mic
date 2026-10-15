@@ -153,5 +153,4 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
     private external fun nativeGetPeakDb(handle: Long): Float
     private external fun nativeIsFeedbackActive(handle: Long): Boolean
     private external fun nativeGetUnderruns(handle: Long): Long
-    private external fun nativeReadProcessed(handle: Long, target: ShortArray): Int
 }
