@@ -35,6 +35,7 @@ sealed interface AudioState {
 enum class MuteReason {
     USER_MANUAL,
     BLUETOOTH_DISCONNECTED,
+    NETWORK_DISCONNECTED,
     INCOMING_PHONE_CALL,
     AUDIO_FOCUS_LOST,
     PUSH_TO_TALK_RELEASED

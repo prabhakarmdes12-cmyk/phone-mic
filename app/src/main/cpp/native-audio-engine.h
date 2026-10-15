@@ -67,6 +67,9 @@ public:
     bool isFeedbackActive() const { return isFeedbackDetected_.load(std::memory_order_relaxed); }
     int64_t getUnderrunCount() const;
 
+    size_t readProcessed(float* data, size_t count) { return recordBuffer_.read(data, count); }
+    void triggerSound(int effect) { soundRequest_.store(((soundRequest_.load() + 4) & ~3) | effect); }
+    float nextSound();
     // Oboe Callbacks
     oboe::DataCallbackResult onAudioReady(
         oboe::AudioStream* stream,
@@ -82,6 +85,10 @@ private:
     std::shared_ptr<oboe::AudioStream> outputStream_;
     std::unique_ptr<LockFreeAudioBuffer> ringBuffer_;
 
+    LockFreeAudioBuffer recordBuffer_{65536};
+    std::atomic<int> soundRequest_{0};
+    int soundConsumed_ = 0, soundEffect_ = 0, soundFrame_ = 96000;
+    uint32_t noise_ = 1234567;
     std::atomic<bool> isRunning_{false};
     std::atomic<bool> isMuted_{false};
     std::atomic<float> linearGain_{1.0f};

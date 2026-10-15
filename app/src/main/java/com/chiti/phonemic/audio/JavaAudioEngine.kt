@@ -1,6 +1,8 @@
 package com.chiti.phonemic.audio
 
 import android.media.*
+import com.chiti.phonemic.model.NetworkRole
+import com.chiti.phonemic.network.UdpAudioStreamer
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -11,7 +13,11 @@ import kotlinx.coroutines.flow.*
 import kotlin.math.*
 
 /** Blocking platform I/O on a dedicated audio worker; no UI or Flow updates in the PCM loop. */
-class JavaAudioEngine(private val context: Context) : AudioEngine {
+class JavaAudioEngine(private val context: Context,
+    private val role: NetworkRole = NetworkRole.STANDALONE,
+    private val network: UdpAudioStreamer? = null,
+    private val recorder: WavAudioRecorder? = null,
+    val soundboard: SoundboardPlayer = SoundboardPlayer()) : AudioEngine {
     private val state = MutableStateFlow<AudioState>(AudioState.Idle)
     override val audioState = state.asStateFlow()
     private val rms = MutableStateFlow(-96f)
@@ -33,7 +39,7 @@ class JavaAudioEngine(private val context: Context) : AudioEngine {
     override suspend fun start(outputDeviceName: String, initialGainDb: Float): Boolean {
         if (running) return true
         state.value = AudioState.Connecting
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        if (role != NetworkRole.RECEIVER && ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             state.value = AudioState.Error("Microphone permission is required")
             return false
         }
@@ -43,34 +49,50 @@ class JavaAudioEngine(private val context: Context) : AudioEngine {
             val outputBytes = AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
             check(inputBytes > 0 && outputBytes > 0)
             val format = AudioFormat.Builder().setSampleRate(rate).setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-            val input = AudioRecord.Builder().setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
+            val input = if (role != NetworkRole.RECEIVER) AudioRecord.Builder().setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
                 .setAudioFormat(format.setChannelMask(AudioFormat.CHANNEL_IN_MONO).build())
-                .setBufferSizeInBytes(max(inputBytes, 1920)).build().also { record = it }
-            val output = AudioTrack.Builder().setAudioAttributes(AudioAttributes.Builder()
+                .setBufferSizeInBytes(max(inputBytes, 1920)).build().also { record = it } else null
+            val output = if (role != NetworkRole.TRANSMITTER) AudioTrack.Builder().setAudioAttributes(AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
                 .setAudioFormat(format.setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
                 .setBufferSizeInBytes(max(outputBytes, 1920)).setTransferMode(AudioTrack.MODE_STREAM)
-                .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY).build().also { track = it }
-            check(input.state == AudioRecord.STATE_INITIALIZED && output.state == AudioTrack.STATE_INITIALIZED)
-            val samples = ShortArray(240)
-            val dsp = SpeechDsp()
+                .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY).build().also { track = it } else null
+            check((input == null || input.state == AudioRecord.STATE_INITIALIZED) && (output == null || output.state == AudioTrack.STATE_INITIALIZED))
+            val samples = ShortArray(480)
+            val dsp = SpeechDsp(soundboard)
             setInputGain(initialGainDb)
-            input.startRecording()
-            check(input.recordingState == AudioRecord.RECORDSTATE_RECORDING)
-            output.play()
+            input?.startRecording()
+            check(input == null || input.recordingState == AudioRecord.RECORDSTATE_RECORDING)
+            output?.play()
             running = true
             state.value = AudioState.Active(outputDeviceName, 0, initialGainDb, preset)
             worker = Thread({
                 Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
                 try {
                     while (running) {
-                        val n = input.read(samples, 0, samples.size, AudioRecord.READ_BLOCKING)
+                        val n = if (input != null) input.read(samples, 0, samples.size, AudioRecord.READ_BLOCKING)
+                        else {
+                            // AudioTrack paces receiver playout; lack of data renders limited silence.
+                            if ((network?.incoming?.available() ?: 0) >= 480) network?.incoming?.poll(samples, 480) ?: 0
+                            else { samples.fill(0); 480 }
+                        }
                         if (n <= 0) { if (running) error("Audio capture failed: $n"); break }
-                        dsp.process(samples, n, gain, preset)
-                        rmsValue = dsp.rmsDb; peakValue = dsp.peakDb
+                        if (role == NetworkRole.RECEIVER) {
+                            // Received PCM is already processed; only mix station chimes + master limiter.
+                            for (i in 0 until n) samples[i] = ((samples[i] / 32768f + soundboard.next())
+                                .coerceIn(-.944f, .944f) * 32767).toInt().toShort()
+                        } else dsp.process(samples, n, gain, preset)
+                        recorder?.offer(samples, n)
+                        if (role == NetworkRole.RECEIVER) {
+                            var energy = 0f; var maximum = 0f
+                            for (i in 0 until n) { val x = samples[i] / 32768f; energy += x * x; maximum = max(maximum, abs(x)) }
+                            rmsValue = if (energy > 1e-10f) 10f * log10(energy / n) else -96f
+                            peakValue = if (maximum > 1e-5f) 20f * log10(maximum) else -96f
+                        } else { rmsValue = dsp.rmsDb; peakValue = dsp.peakDb }
+                        if (role == NetworkRole.TRANSMITTER) { network?.outgoing?.offer(samples, n); continue }
                         var offset = 0
                         while (running && offset < n) {
-                            val written = output.write(samples, offset, n - offset, AudioTrack.WRITE_BLOCKING)
+                            val written = output?.write(samples, offset, n - offset, AudioTrack.WRITE_BLOCKING) ?: -1
                             if (written <= 0) { if (running) error("Audio playback failed: $written"); break }
                             offset += written
                         }

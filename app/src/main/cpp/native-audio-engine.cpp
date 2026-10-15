@@ -128,6 +128,8 @@ bool NativeAudioEngine::start() {
     if (isRunning_.load()) return true;
 
     ringBuffer_->reset();
+    recordBuffer_.reset();
+    soundFrame_ = 96000;
     isMuted_.store(false);
     dcBlockerPrevX_ = dcBlockerPrevY_ = 0.0f;
     hpfFilter_.reset(); eqMidFilter_.reset();
@@ -157,6 +159,8 @@ bool NativeAudioEngine::openStreams() {
              ->setSharingMode(oboe::SharingMode::Exclusive)
              ->setFormat(oboe::AudioFormat::Float)
              ->setChannelCount(oboe::ChannelCount::Mono)
+             ->setSampleRate(48000)
+             ->setSampleRateConversionQuality(oboe::SampleRateConversionQuality::Medium)
              ->setInputPreset(oboe::InputPreset::VoiceCommunication)
              ->setDataCallback(this);
 
@@ -256,6 +260,24 @@ int64_t NativeAudioEngine::getUnderrunCount() const {
     return 0;
 }
 
+float NativeAudioEngine::nextSound() {
+    const int request = soundRequest_.load(std::memory_order_relaxed);
+    if (request != soundConsumed_) { soundConsumed_ = request; soundEffect_ = request & 3; soundFrame_ = 0; }
+    if (soundFrame_ >= 96000) return 0.0f;
+    const float t = soundFrame_++ / sampleRate_;
+    float y = 0;
+    if (soundEffect_ == 1) {
+        const float phase = t < .6f ? t : t - .6f;
+        y = sinf(2 * M_PI * (t < .6f ? 587 : 880) * phase) * expf(-5 * phase);
+    } else if (soundEffect_ == 2) {
+        noise_ ^= noise_ << 13; noise_ ^= noise_ >> 17; noise_ ^= noise_ << 5;
+        y = (static_cast<float>(noise_) / 2147483648.0f - 1.0f) * expf(-1.8f * t);
+    } else if (soundEffect_ == 3) {
+        y = sinf(2 * M_PI * (650 * t - 180 / (2 * M_PI * 1.5f) * cosf(2 * M_PI * 1.5f * t)));
+    }
+    return y * .23f * std::min(1.0f, t * 200) * std::clamp((2.0f - t) * 100, 0.0f, 1.0f);
+}
+
 void NativeAudioEngine::processDsp(float* buffer, int32_t numFrames) {
     const int preset = requestedPreset_.load(std::memory_order_relaxed);
     // Only the output callback owns filter state and coefficients.
@@ -299,7 +321,7 @@ void NativeAudioEngine::processDsp(float* buffer, int32_t numFrames) {
 
         // 5. Brickwall Peak Limiter (-0.5 dBFS ceiling approx 0.944)
         const float ceiling = 0.944f;
-        float yLimited = std::clamp(yEq, -ceiling, ceiling);
+        float yLimited = std::clamp(yEq + nextSound(), -ceiling, ceiling);
 
         buffer[i] = yLimited;
 
@@ -361,6 +383,7 @@ oboe::DataCallbackResult NativeAudioEngine::onAudioReady(
             std::fill(floatData + readCount, floatData + numFrames, 0.0f);
         }
         processDsp(floatData, numFrames);
+        recordBuffer_.write(floatData, static_cast<size_t>(numFrames));
     }
 
     return oboe::DataCallbackResult::Continue;
@@ -446,3 +469,20 @@ Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeGetUnderruns(JNIEnv* env, 
 }
 
 } // extern "C"
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeReadProcessed(JNIEnv* env, jobject, jlong handle, jshortArray target) {
+    auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
+    if (!engine) return 0;
+    float data[2048];
+    jshort pcm[2048];
+    const auto count = engine->readProcessed(data, std::min(2048, env->GetArrayLength(target)));
+    for (size_t i = 0; i < count; ++i) pcm[i] = static_cast<jshort>(data[i] * 32767);
+    env->SetShortArrayRegion(target, 0, static_cast<jsize>(count), pcm);
+    return static_cast<jint>(count);
+}
+extern "C" JNIEXPORT void JNICALL
+Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeTriggerSound(JNIEnv*, jobject, jlong handle, jint effect) {
+    auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
+    if (engine) engine->triggerSound(effect);
+}

@@ -15,6 +15,7 @@ import androidx.core.app.NotificationCompat
 import com.chiti.phonemic.MainActivity
 import com.chiti.phonemic.audio.AudioSessionManager
 import com.chiti.phonemic.audio.AudioState
+import com.chiti.phonemic.model.NetworkRole
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 
@@ -46,9 +47,6 @@ class MicForegroundService : Service() {
         }
 
         fun stop(context: Context) {
-            val intent = Intent(context, MicForegroundService::class.java).apply {
-                action = ACTION_STOP
-            }
             context.stopService(Intent(context, MicForegroundService::class.java))
         }
     }
@@ -103,7 +101,8 @@ class MicForegroundService : Service() {
             startForeground(
                 NOTIFICATION_ID,
                 notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                if (session.role.value == NetworkRole.RECEIVER) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                else ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
             )
         } else {
             startForeground(NOTIFICATION_ID, notification)

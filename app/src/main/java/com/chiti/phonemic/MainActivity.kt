@@ -85,10 +85,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.chiti.phonemic.audio.AudioEngine
 import com.chiti.phonemic.audio.AudioSessionManager
 import com.chiti.phonemic.audio.AudioState
 import com.chiti.phonemic.audio.MuteReason
+import com.chiti.phonemic.ui.SessionTools
+import com.chiti.phonemic.model.NetworkRole
 import com.chiti.phonemic.bluetooth.BluetoothAudioRouter
 import com.chiti.phonemic.model.VoicePreset
 import kotlinx.coroutines.launch
@@ -143,6 +144,7 @@ fun PhoneMicScreen(
     val rmsDb by audioEngine.currentRmsDb.collectAsState()
     val peakDb by audioEngine.currentPeakDb.collectAsState()
     val isFeedbackActive by audioEngine.isFeedbackActive.collectAsState()
+    val networkRole by audioEngine.role.collectAsState()
 
     var inputGainDb by remember { mutableFloatStateOf(0.0f) }
     var selectedPresetId by remember { mutableIntStateOf(0) }
@@ -210,6 +212,8 @@ fun PhoneMicScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
+            SessionTools(audioEngine)
+            Spacer(modifier = Modifier.height(14.dp))
             // Top Bar
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
@@ -394,8 +398,9 @@ fun PhoneMicScreen(
                             color = if (isActive || isPttHolding) Color(0xFFC499FF) else Color(0xFF383842),
                             shape = CircleShape
                         )
-                        .pointerInput(micMode, hasPermissions) {
-                            if (!hasPermissions) {
+                        .pointerInput(micMode, hasPermissions, networkRole) {
+                            val needsMic = !hasPermissions && networkRole != NetworkRole.RECEIVER
+                            if (needsMic) {
                                 detectTapGestures {
                                     permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
                                 }

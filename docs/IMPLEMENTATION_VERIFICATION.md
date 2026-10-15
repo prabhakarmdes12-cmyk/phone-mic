@@ -93,3 +93,11 @@ Fallback tone shaping is simpler than native biquad EQ. Native preset changes
 are now race-free but artifact-free transitions still need listening tests.
 Call protection currently depends on audio-focus loss; telephony/VoIP behavior
 must be tested across devices. No call audio is intentionally captured.
+
+
+## Phases 4–6 follow-up
+
+Recording, WAV share/preview, NSD/UDP two-phone mode and the synthesized PA
+soundboard are now implemented. See [PHASES_4_6.md](PHASES_4_6.md) for current
+architecture, successful CI evidence, APK/web artifact links and remaining
+hardware testing. Earlier sections describe the initial dual-engine milestone.
