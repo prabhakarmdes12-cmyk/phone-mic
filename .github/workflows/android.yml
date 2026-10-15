@@ -40,8 +40,23 @@ jobs:
             echo "::error::$details"
           fi
           exit "$result"
-      - run: ./gradlew clean assembleDebug testDebugUnitTest lintDebug --stacktrace
+      - name: APK, unit tests and lint
+        shell: bash
+        run: |
+          set +e
+          ./gradlew clean assembleDebug testDebugUnitTest lintDebug > verification.log 2>&1
+          result=$?
+          cat verification.log
+          if [ "$result" -ne 0 ]; then
+            details=$(tail -100 verification.log)
+            details="${details//'%'/'%25'}"
+            details="${details//$'\n'/'%0A'}"
+            details="${details//$'\r'/'%0D'}"
+            echo "::error::$details"
+          fi
+          exit "$result"
       - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
         with:
           name: PhoneMic-debug
           path: app/build/outputs/apk/debug/app-debug.apk
