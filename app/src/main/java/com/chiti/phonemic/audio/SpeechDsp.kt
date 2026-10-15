@@ -3,7 +3,7 @@ package com.chiti.phonemic.audio
 import kotlin.math.*
 
 /** Allocation-free speech shaping with smoothed gain/tone and a permanent -0.5 dBFS ceiling. */
-class SpeechDsp {
+class SpeechDsp(val soundboard: SoundboardPlayer = SoundboardPlayer()) {
     private var previous = 0f
     private var highPass = 0f
     private var low = 0f
@@ -24,7 +24,7 @@ class SpeechDsp {
             low += .28f * (highPass - low)
             var y = (highPass + presence * (highPass - low)) * gain
             if (preset == 2) y = tanh(y * 1.6f)
-            y = y.coerceIn(-.944f, .944f)
+            y = (y + soundboard.next()).coerceIn(-.944f, .944f)
             samples[i] = (y * 32767f).toInt().toShort()
             sum += y * y; peak = max(peak, abs(y))
         }

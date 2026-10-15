@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.*
+import com.chiti.phonemic.model.NetworkRole
+import com.chiti.phonemic.network.*
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
@@ -27,6 +29,49 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     override val currentRmsDb = rms.asStateFlow()
     private val peak = MutableStateFlow(-96f)
     override val currentPeakDb = peak.asStateFlow()
+    val recorder = WavAudioRecorder(context)
+    val discovery = AudioServiceDiscovery(context)
+    private val selectedRole = MutableStateFlow(NetworkRole.STANDALONE)
+    val role = selectedRole.asStateFlow()
+    private val networkMessage = MutableStateFlow("Single phone")
+    val connectionStatus = networkMessage.asStateFlow()
+    private var selectedReceiver: AudioReceiver? = null
+    private var network: UdpAudioStreamer? = null
+    private var preview: MediaPlayer? = null
+    fun setRole(value: NetworkRole) {
+        if (state.value is AudioState.Active || state.value == AudioState.Connecting) return
+        stop(); discovery.stop(); selectedRole.value = value; selectedReceiver = null
+        networkMessage.value = if (value == NetworkRole.STANDALONE) "Single phone" else "Trusted Wi-Fi only • unencrypted audio"
+        if (value == NetworkRole.TRANSMITTER) discovery.discoverServices()
+    }
+    fun selectReceiver(receiver: AudioReceiver) {
+        if (state.value is AudioState.Active || state.value == AudioState.Connecting) return
+        selectedReceiver = receiver
+        networkMessage.value = "Selected ${receiver.name} (${receiver.address.hostAddress})"
+    }
+    fun triggerSound(effect: Int) {
+        if (state.value !is AudioState.Active) return
+        when (val current = engine) {
+            is NativeAudioEngine -> current.triggerSound(effect)
+            is JavaAudioEngine -> current.soundboard.trigger(effect)
+        }
+    }
+    fun toggleRecording() {
+        if (recorder.state.value.recording) recorder.stop()
+        else if (state.value is AudioState.Active) recorder.start()
+    }
+    fun playPreview() {
+        if (state.value is AudioState.Active || state.value == AudioState.Connecting) return
+        val file = recorder.state.value.file ?: return
+        preview?.release(); preview = null
+        runCatching {
+            preview = MediaPlayer().apply {
+                setDataSource(file.absolutePath)
+                setOnCompletionListener { it.release(); if (preview === it) preview = null }
+                prepare(); start()
+            }
+        }.onFailure { preview?.release(); preview = null; networkMessage.value = "Preview unavailable" }
+    }
     private var engine: AudioEngine? = null
     private var meters: Job? = null
     private var gain = 0f
@@ -46,9 +91,13 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     }
     override suspend fun start(outputDeviceName: String, initialGainDb: Float): Boolean {
         if (state.value is AudioState.Active || state.value == AudioState.Connecting) return true
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        if (selectedRole.value != NetworkRole.RECEIVER && ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             state.value = AudioState.Error("Microphone permission is required"); return false
         }
+        if (selectedRole.value == NetworkRole.TRANSMITTER && selectedReceiver == null) {
+            state.value = AudioState.Error("Select a discovered receiver first"); return false
+        }
+        preview?.release(); preview = null
         gain = initialGainDb; deviceName = outputDeviceName
         state.value = AudioState.Connecting
         return try { MicForegroundService.start(context, deviceName); true }
@@ -61,16 +110,30 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         }
         var candidate: AudioEngine? = null
         try {
-            candidate = NativeAudioEngine()
-            candidate.setVoicePreset(preset)
-            if (!candidate.start(deviceName, gain)) { candidate.stop(); candidate = null }
+            when (selectedRole.value) {
+                NetworkRole.TRANSMITTER -> {
+                    network = UdpAudioStreamer().also { it.startTransmitter(checkNotNull(selectedReceiver)) }
+                }
+                NetworkRole.RECEIVER -> {
+                    network = UdpAudioStreamer().also { it.startReceiver() }
+                    discovery.registerService()
+                }
+                else -> Unit
+            }
+        } catch (e: Exception) {
+            closeEngine(); state.value = AudioState.Error("Cannot start Wi-Fi audio: ${e.message}"); return false
+        }
+        try {
+            if (selectedRole.value == NetworkRole.STANDALONE) candidate = NativeAudioEngine(recorder)
+            candidate?.setVoicePreset(preset)
+            if (candidate != null && !candidate.start(deviceName, gain)) { candidate.stop(); candidate = null }
         } catch (_: LinkageError) { candidate?.stop(); candidate = null }
           catch (_: Exception) { candidate?.stop(); candidate = null }
         if (candidate == null) {
-            candidate = JavaAudioEngine(context)
+            candidate = JavaAudioEngine(context, selectedRole.value, network, recorder)
             candidate.setVoicePreset(preset)
             if (!candidate.start(deviceName, gain)) {
-                candidate.stop(); audioManager.abandonAudioFocusRequest(focus)
+                candidate.stop(); closeEngine()
                 state.value = AudioState.Error("Neither audio engine could start"); return false
             }
         }
@@ -79,6 +142,10 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         val active = checkNotNull(candidate)
         meters = scope.launch {
             while (isActive) {
+                network?.let { networkMessage.value = it.status.value }
+                if (network?.failed == true) {
+                    setMuted(true, MuteReason.NETWORK_DISCONNECTED); break
+                }
                 rms.value = active.currentRmsDb.value; peak.value = active.currentPeakDb.value
                 if (active.audioState.value is AudioState.Error) {
                     stop(); state.value = AudioState.Error("Audio device stopped. Tap to retry."); break
@@ -91,6 +158,9 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     private fun closeEngine() {
         meters?.cancel(); meters = null
         engine?.stop(); engine = null
+        recorder.stop()
+        network?.stop(); network = null
+        if (selectedRole.value == NetworkRole.RECEIVER) discovery.stop()
         audioManager.abandonAudioFocusRequest(focus)
         rms.value = -96f; peak.value = -96f
     }

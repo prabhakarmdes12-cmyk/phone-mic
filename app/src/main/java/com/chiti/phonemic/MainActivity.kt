@@ -64,6 +64,8 @@ import androidx.core.content.ContextCompat
 import com.chiti.phonemic.audio.AudioState
 import com.chiti.phonemic.audio.AudioSessionManager
 import com.chiti.phonemic.audio.AudioEngine
+import com.chiti.phonemic.ui.SessionTools
+import com.chiti.phonemic.model.NetworkRole
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -170,6 +172,7 @@ fun PhoneMicScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
+        (audioEngine as? AudioSessionManager)?.let { SessionTools(it) }
         // Top Bar & Output Device Card
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -268,7 +271,7 @@ fun PhoneMicScreen(
                     )
                     .clickable(enabled = audioState != AudioState.Connecting) {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        if (!hasPermissions) {
+                        if (!hasPermissions && (audioEngine as? AudioSessionManager)?.role?.value != NetworkRole.RECEIVER) {
                             permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
                         } else scope.launch {
                             if (isActive) {
