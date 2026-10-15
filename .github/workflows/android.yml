@@ -19,9 +19,12 @@ jobs:
       - name: Verify preinstalled Android tools
         run: |
           java -version
-          command -v sdkmanager
-          sdkmanager --version
-      - run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0' 'ndk;26.1.10909125' 'cmake;3.22.1'
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          ls "$ANDROID_HOME/cmdline-tools"
+      - name: Install pinned Android packages
+        run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-34' 'build-tools;34.0.0' 'ndk;26.1.10909125' 'cmake;3.22.1' 
       - run: ./gradlew :app:externalNativeBuildDebug
       - run: ./gradlew clean assembleDebug testDebugUnitTest lintDebug --stacktrace
       - uses: actions/upload-artifact@v4
