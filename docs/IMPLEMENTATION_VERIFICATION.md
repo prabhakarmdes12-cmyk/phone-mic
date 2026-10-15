@@ -24,6 +24,23 @@ probe to dl.google.com failed; this environment restricts outbound hosts.
 **No successful assembleDebug, APK, installation or hardware test is claimed.**
 `git diff --check` passed. DSP JUnit tests are provided but could not run here.
 
+## Successful GitHub CI retry (2026-10-15)
+
+Verified application commit `6387499` on Ubuntu 24.04 with JDK 17:
+
+- `./gradlew :app:externalNativeBuildDebug` passed.
+- `./gradlew clean assembleDebug testDebugUnitTest lintDebug` passed (exit 0).
+- `app/build/outputs/apk/debug/app-debug.apk` was generated and uploaded as
+  the `PhoneMic-debug` workflow artifact.
+
+Run: https://github.com/prabhakarmdes12-cmyk/phone-mic/actions/runs/38707531521
+
+The retry fixed SDK installer setup, removed an unavailable Kotlin 2 Compose
+plugin reference from the Kotlin 1.9 build, and added an explicit fallback-engine
+microphone permission check. This supersedes the sandbox-only build limitation
+above; local sandbox tooling remains unavailable. Physical-device and emulator
+acceptance tests are still pending, and no runtime/latency guarantees are claimed.
+
 ## Implemented architecture
 
 - Process-scoped AudioSessionManager; activity observes StateFlow and does not
