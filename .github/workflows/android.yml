@@ -24,8 +24,21 @@ jobs:
       - name: Install pinned Android packages
         run: |
           export JAVA_HOME="$JAVA_HOME_21_X64"
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-34' 'build-tools;34.0.0' 'ndk;26.1.10909125' 'cmake;3.22.1' 
-      - run: ./gradlew :app:externalNativeBuildDebug
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-34' 'build-tools;34.0.0' 'ndk;26.1.10909125' 'cmake;3.22.1'
+      - name: Native build with API-readable diagnostics
+        shell: bash
+        run: |
+          set +e
+          ./gradlew :app:externalNativeBuildDebug > native-build.log 2>&1
+          result=$?
+          cat native-build.log
+          if [ "$result" -ne 0 ]; then
+            tail -70 native-build.log | while IFS= read -r line; do
+              line="${line//'%'/'%25'}"
+              echo "::error::$line"
+            done
+          fi
+          exit "$result"
       - run: ./gradlew clean assembleDebug testDebugUnitTest lintDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
