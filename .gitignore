@@ -13,6 +13,7 @@
 .externalNativeBuild
 .cxx
 *.apk
+!web/*.apk
 *.aab
 *.dex
 output.json
