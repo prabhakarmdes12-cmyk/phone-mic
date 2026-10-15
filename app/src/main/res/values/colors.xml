@@ -1,0 +1,7 @@
+<resources>
+    <color name="black">#FF101012</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="mic_active">#FF00E676</color>
+    <color name="mic_idle">#FF26262C</color>
+    <color name="surface_dark">#FF1A1A1E</color>
+</resources>

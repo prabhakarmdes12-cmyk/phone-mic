@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.PhoneMic" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#FF101012</item>
+        <item name="android:navigationBarColor">#FF101012</item>
+        <item name="android:windowBackground">#FF101012</item>
+    </style>
+</resources>
