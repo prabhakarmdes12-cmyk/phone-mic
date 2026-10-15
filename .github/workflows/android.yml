@@ -8,15 +8,19 @@ permissions:
   contents: read
 jobs:
   debug:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
+      - name: Verify preinstalled Android tools
+        run: |
+          java -version
+          command -v sdkmanager
+          sdkmanager --version
       - run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0' 'ndk;26.1.10909125' 'cmake;3.22.1'
       - run: ./gradlew :app:externalNativeBuildDebug
       - run: ./gradlew clean assembleDebug testDebugUnitTest lintDebug --stacktrace
