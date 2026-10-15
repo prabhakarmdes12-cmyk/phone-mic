@@ -262,16 +262,20 @@ void NativeAudioEngine::processDsp(float* buffer, int32_t numFrames) {
     if (preset != appliedPreset_) { applyVoicePreset(preset); appliedPreset_ = preset; }
     float gain = linearGain_.load(std::memory_order_relaxed);
     bool muted = isMuted_.load(std::memory_order_relaxed);
+    bool feedbackEnabled = feedbackProtection_.load(std::memory_order_relaxed);
 
     if (muted) {
         std::fill(buffer, buffer + numFrames, 0.0f);
         currentRmsDb_.store(-96.0f, std::memory_order_relaxed);
         currentPeakDb_.store(-96.0f, std::memory_order_relaxed);
+        isFeedbackDetected_.store(false, std::memory_order_relaxed);
+        feedbackHoldFrames_ = 0;
         return;
     }
 
     float sumSq = 0.0f;
     float peak = 0.0f;
+    int zeroCrossings = 0;
 
     for (int32_t i = 0; i < numFrames; ++i) {
         smoothedGain_ += 0.002f * (gain - smoothedGain_);
@@ -288,11 +292,22 @@ void NativeAudioEngine::processDsp(float* buffer, int32_t numFrames) {
         // 3. Speech Intelligibility EQ
         float yEq = eqMidFilter_.process(yHpf);
 
-        // 4. Brickwall Peak Limiter (-0.5 dBFS ceiling approx 0.944)
+        // 4. Dynamic Feedback Notch Filter
+        if (feedbackEnabled && feedbackHoldFrames_ > 0) {
+            yEq = feedbackNotchFilter_.process(yEq);
+        }
+
+        // 5. Brickwall Peak Limiter (-0.5 dBFS ceiling approx 0.944)
         const float ceiling = 0.944f;
         float yLimited = std::clamp(yEq, -ceiling, ceiling);
 
         buffer[i] = yLimited;
+
+        // Detect zero crossings for resonance frequency estimation
+        if ((prevSample_ < 0.0f && yLimited >= 0.0f) || (prevSample_ >= 0.0f && yLimited < 0.0f)) {
+            zeroCrossings++;
+        }
+        prevSample_ = yLimited;
 
         // Accumulate metering
         sumSq += yLimited * yLimited;
@@ -307,6 +322,25 @@ void NativeAudioEngine::processDsp(float* buffer, int32_t numFrames) {
 
     currentRmsDb_.store(rmsDb, std::memory_order_relaxed);
     currentPeakDb_.store(peakDb, std::memory_order_relaxed);
+
+    // Adaptive Feedback Howling Detector
+    if (feedbackEnabled) {
+        if (feedbackHoldFrames_ > 0) {
+            feedbackHoldFrames_ -= numFrames;
+            if (feedbackHoldFrames_ <= 0) {
+                isFeedbackDetected_.store(false, std::memory_order_relaxed);
+                feedbackNotchFilter_.reset();
+            }
+        } else if (peak > 0.65f && rms > 0.45f && numFrames > 0) {
+            // Sustained pure tone resonance signature (high peak-to-average ratio)
+            float estFreq = (static_cast<float>(zeroCrossings) * sampleRate_) / (2.0f * static_cast<float>(numFrames));
+            if (estFreq >= 500.0f && estFreq <= 7500.0f) {
+                feedbackNotchFilter_.setNotch(sampleRate_, estFreq, 8.0f);
+                feedbackHoldFrames_ = static_cast<int>(sampleRate_ * 1.5f); // 1.5s suppression
+                isFeedbackDetected_.store(true, std::memory_order_relaxed);
+            }
+        }
+    }
 }
 
 oboe::DataCallbackResult NativeAudioEngine::onAudioReady(
@@ -397,6 +431,12 @@ JNIEXPORT jfloat JNICALL
 Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeGetPeakDb(JNIEnv* env, jobject thiz, jlong handle) {
     auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
     return engine ? engine->getCurrentPeakDb() : -96.0f;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeIsFeedbackActive(JNIEnv* env, jobject thiz, jlong handle) {
+    auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
+    return engine ? engine->isFeedbackActive() : false;
 }
 
 JNIEXPORT jlong JNICALL

@@ -34,6 +34,9 @@ class NativeAudioEngine : AudioEngine {
     private val _currentPeakDb = MutableStateFlow(-96.0f)
     override val currentPeakDb: StateFlow<Float> = _currentPeakDb.asStateFlow()
 
+    private val _isFeedbackActive = MutableStateFlow(false)
+    override val isFeedbackActive: StateFlow<Boolean> = _isFeedbackActive.asStateFlow()
+
     init {
         nativeHandle = nativeCreate()
     }
@@ -70,6 +73,7 @@ class NativeAudioEngine : AudioEngine {
         _audioState.value = AudioState.Idle
         _currentRmsDb.value = -96.0f
         _currentPeakDb.value = -96.0f
+        _isFeedbackActive.value = false
     }
 
     override fun setInputGain(gainDb: Float) {
@@ -112,6 +116,7 @@ class NativeAudioEngine : AudioEngine {
             while (isActive && _audioState.value is AudioState.Active) {
                 _currentRmsDb.value = nativeGetRmsDb(nativeHandle)
                 _currentPeakDb.value = nativeGetPeakDb(nativeHandle)
+                _isFeedbackActive.value = nativeIsFeedbackActive(nativeHandle)
                 delay(33) // ~30 FPS UI metering update
             }
         }
@@ -135,5 +140,6 @@ class NativeAudioEngine : AudioEngine {
     private external fun nativeSetFeedbackSuppression(handle: Long, enabled: Boolean)
     private external fun nativeGetRmsDb(handle: Long): Float
     private external fun nativeGetPeakDb(handle: Long): Float
+    private external fun nativeIsFeedbackActive(handle: Long): Boolean
     private external fun nativeGetUnderruns(handle: Long): Long
 }

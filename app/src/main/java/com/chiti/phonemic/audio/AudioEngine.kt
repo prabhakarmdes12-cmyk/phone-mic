@@ -9,6 +9,7 @@ interface AudioEngine {
     val audioState: StateFlow<AudioState>
     val currentRmsDb: StateFlow<Float>
     val currentPeakDb: StateFlow<Float>
+    val isFeedbackActive: StateFlow<Boolean>
 
     suspend fun start(outputDeviceName: String, initialGainDb: Float = 0.0f): Boolean
     fun stop()

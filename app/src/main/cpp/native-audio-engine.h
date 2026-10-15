@@ -64,6 +64,7 @@ public:
 
     float getCurrentRmsDb() const { return currentRmsDb_.load(); }
     float getCurrentPeakDb() const { return currentPeakDb_.load(); }
+    bool isFeedbackActive() const { return isFeedbackDetected_.load(std::memory_order_relaxed); }
     int64_t getUnderrunCount() const;
 
     // Oboe Callbacks
@@ -103,6 +104,13 @@ private:
     BiquadFilter eqMidFilter_;
     BiquadFilter eqHighFilter_;
     BiquadFilter feedbackNotchFilter_;
+
+    // Feedback suppression state
+    std::atomic<bool> isFeedbackDetected_{false};
+    int feedbackHoldFrames_ = 0;
+    float prevSample_ = 0.0f;
+    int zeroCrossings_ = 0;
+    float peakInBlock_ = 0.0f;
 
     // Compressor & Limiter State
     float compressorEnv_ = 0.0f;

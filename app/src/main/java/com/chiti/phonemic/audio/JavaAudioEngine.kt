@@ -18,6 +18,8 @@ class JavaAudioEngine(private val context: Context) : AudioEngine {
     override val currentRmsDb = rms.asStateFlow()
     private val peak = MutableStateFlow(-96f)
     override val currentPeakDb = peak.asStateFlow()
+    private val feedback = MutableStateFlow(false)
+    override val isFeedbackActive = feedback.asStateFlow()
     @Volatile private var running = false
     @Volatile private var gain = 1f
     @Volatile private var preset = 0

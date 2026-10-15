@@ -27,7 +27,15 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     override val currentRmsDb = rms.asStateFlow()
     private val peak = MutableStateFlow(-96f)
     override val currentPeakDb = peak.asStateFlow()
+    private val feedback = MutableStateFlow(false)
+    override val isFeedbackActive = feedback.asStateFlow()
     private var engine: AudioEngine? = null
+    val activeEngineName: String
+        get() = when (engine) {
+            is NativeAudioEngine -> "Native C++ (Oboe / AAudio)"
+            is JavaAudioEngine -> "Platform Fallback (AudioRecord)"
+            else -> "Ready (Auto)"
+        }
     private var meters: Job? = null
     private var gain = 0f
     private var preset = 0
@@ -80,6 +88,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         meters = scope.launch {
             while (isActive) {
                 rms.value = active.currentRmsDb.value; peak.value = active.currentPeakDb.value
+                feedback.value = active.isFeedbackActive.value
                 if (active.audioState.value is AudioState.Error) {
                     stop(); state.value = AudioState.Error("Audio device stopped. Tap to retry."); break
                 }
@@ -93,6 +102,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         engine?.stop(); engine = null
         audioManager.abandonAudioFocusRequest(focus)
         rms.value = -96f; peak.value = -96f
+        feedback.value = false
     }
     override fun stop() {
         closeEngine(); state.value = AudioState.Idle
