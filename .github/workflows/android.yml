@@ -33,10 +33,11 @@ jobs:
           result=$?
           cat native-build.log
           if [ "$result" -ne 0 ]; then
-            tail -70 native-build.log | while IFS= read -r line; do
-              line="${line//'%'/'%25'}"
-              echo "::error::$line"
-            done
+            details=$(tail -45 native-build.log)
+            details="${details//'%'/'%25'}"
+            details="${details//$'\n'/'%0A'}"
+            details="${details//$'\r'/'%0D'}"
+            echo "::error::$details"
           fi
           exit "$result"
       - run: ./gradlew clean assembleDebug testDebugUnitTest lintDebug --stacktrace
