@@ -2,6 +2,7 @@ package com.chiti.phonemic.audio
 
 import android.content.Context
 import android.os.Environment
+import android.os.Build
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.io.File
@@ -49,7 +50,7 @@ class WavAudioRecorder(private val context: Context) {
             var file: File? = null
             var count = 0L
             try {
-                val directory = context.getExternalFilesDir(Environment.DIRECTORY_RECORDINGS)
+                val directory = context.getExternalFilesDir(if (Build.VERSION.SDK_INT >= 31) Environment.DIRECTORY_RECORDINGS else "Recordings")
                     ?: error("Recording storage unavailable")
                 check(directory.exists() || directory.mkdirs())
                 file = File.createTempFile("PhoneMic_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}_", ".wav", directory)

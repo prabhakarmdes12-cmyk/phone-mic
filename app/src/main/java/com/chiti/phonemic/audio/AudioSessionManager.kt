@@ -68,7 +68,9 @@ class AudioSessionManager private constructor(private val context: Context) : Au
             preview = MediaPlayer().apply {
                 setDataSource(file.absolutePath)
                 setOnCompletionListener { it.release(); if (preview === it) preview = null }
-                prepare(); start()
+                setOnPreparedListener { it.start() }
+                setOnErrorListener { player, _, _ -> player.release(); if (preview === player) preview = null; true }
+                prepareAsync()
             }
         }.onFailure { preview?.release(); preview = null; networkMessage.value = "Preview unavailable" }
     }

@@ -50,18 +50,18 @@ class JavaAudioEngine(private val context: Context,
             val input = if (role != NetworkRole.RECEIVER) AudioRecord.Builder().setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
                 .setAudioFormat(format.setChannelMask(AudioFormat.CHANNEL_IN_MONO).build())
                 .setBufferSizeInBytes(max(inputBytes, 1920)).build().also { record = it } else null
-            val output = AudioTrack.Builder().setAudioAttributes(AudioAttributes.Builder()
+            val output = if (role != NetworkRole.TRANSMITTER) AudioTrack.Builder().setAudioAttributes(AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
                 .setAudioFormat(format.setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
                 .setBufferSizeInBytes(max(outputBytes, 1920)).setTransferMode(AudioTrack.MODE_STREAM)
-                .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY).build().also { track = it }
-            check((input == null || input.state == AudioRecord.STATE_INITIALIZED) && output.state == AudioTrack.STATE_INITIALIZED)
+                .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY).build().also { track = it } else null
+            check((input == null || input.state == AudioRecord.STATE_INITIALIZED) && (output == null || output.state == AudioTrack.STATE_INITIALIZED))
             val samples = ShortArray(480)
             val dsp = SpeechDsp(soundboard)
             setInputGain(initialGainDb)
             input?.startRecording()
             check(input == null || input.recordingState == AudioRecord.RECORDSTATE_RECORDING)
-            if (role != NetworkRole.TRANSMITTER) output.play()
+            output?.play()
             running = true
             state.value = AudioState.Active(outputDeviceName, 0, initialGainDb, preset)
             worker = Thread({
@@ -90,7 +90,7 @@ class JavaAudioEngine(private val context: Context,
                         if (role == NetworkRole.TRANSMITTER) { network?.outgoing?.offer(samples, n); continue }
                         var offset = 0
                         while (running && offset < n) {
-                            val written = output.write(samples, offset, n - offset, AudioTrack.WRITE_BLOCKING)
+                            val written = output?.write(samples, offset, n - offset, AudioTrack.WRITE_BLOCKING) ?: -1
                             if (written <= 0) { if (running) error("Audio playback failed: $written"); break }
                             offset += written
                         }

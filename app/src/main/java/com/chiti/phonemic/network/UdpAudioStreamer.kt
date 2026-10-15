@@ -12,8 +12,8 @@ import java.nio.ByteOrder
  * All socket I/O lives on Dispatchers.IO. Audio only touches its dedicated SPSC queue.
  */
 class UdpAudioStreamer {
-    val outgoing = PcmRingBuffer()
-    val incoming = PcmRingBuffer()
+    val outgoing = PcmRingBuffer(4096)
+    val incoming = PcmRingBuffer(4096)
     private val mutable = MutableStateFlow("Offline")
     val status = mutable.asStateFlow()
     @Volatile var failed = false; private set
