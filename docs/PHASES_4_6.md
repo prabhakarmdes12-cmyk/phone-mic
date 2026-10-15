@@ -85,6 +85,26 @@ Download/unzip/deploy the web artifact as a unit; the source-only landing page's
 relative download link is populated by CI, not a placeholder/fake APK. No web
 hosting deployment is claimed.
 
+## Verified CI result — 2026-10-15
+
+Application commit `929ccda158282ab22bce1e8c0541c7c1ab7b6488` passed:
+
+- `./gradlew :app:externalNativeBuildDebug`
+- `./gradlew clean assembleDebug testDebugUnitTest lintDebug`
+- Debug APK upload and web distribution packaging.
+
+Workflow conclusion: **success** (exit 0).
+Run: https://github.com/prabhakarmdes12-cmyk/phone-mic/actions/runs/38725214163
+
+Artifacts:
+- PhoneMic-debug: https://github.com/prabhakarmdes12-cmyk/phone-mic/actions/runs/38725214163/artifacts/11967572203
+- PhoneMic-web (index.html + app-debug.apk): https://github.com/prabhakarmdes12-cmyk/phone-mic/actions/runs/38725214163/artifacts/11967272349
+
+The first implementation run compiled and passed tests, but lint caught use of
+`Environment.DIRECTORY_RECORDINGS` on API 26. A version-gated string fallback
+fixed that error without raising minSdk or suppressing lint. The successful run
+still has nonfatal lint/tooling warnings; no warning-free claim is made.
+
 ## Verification and remaining device work
 
 Unit coverage includes canonical WAV header fields/overflow, SPSC wrap/overflow
