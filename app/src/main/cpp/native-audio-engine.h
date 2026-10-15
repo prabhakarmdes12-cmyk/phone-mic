@@ -86,6 +86,11 @@ private:
     std::atomic<float> linearGain_{1.0f};
     std::atomic<bool> feedbackProtection_{true};
 
+    std::atomic<int> requestedPreset_{0};
+    int appliedPreset_ = -1;
+    float smoothedGain_ = 0.0f;
+    void applyVoicePreset(int presetId);
+
     // Metering
     std::atomic<float> currentRmsDb_{-96.0f};
     std::atomic<float> currentPeakDb_{-96.0f};

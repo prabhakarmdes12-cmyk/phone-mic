@@ -62,7 +62,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.chiti.phonemic.audio.AudioState
-import com.chiti.phonemic.audio.NativeAudioEngine
+import com.chiti.phonemic.audio.AudioSessionManager
+import com.chiti.phonemic.audio.AudioEngine
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.chiti.phonemic.bluetooth.BluetoothAudioRouter
 import com.chiti.phonemic.model.VoicePreset
 import com.chiti.phonemic.service.MicForegroundService
@@ -70,30 +75,29 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var audioEngine: NativeAudioEngine
+    private lateinit var audioEngine: AudioSessionManager
     private lateinit var bluetoothRouter: BluetoothAudioRouter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        audioEngine = NativeAudioEngine()
-        bluetoothRouter = BluetoothAudioRouter(this)
-        bluetoothRouter.startListening()
+        audioEngine = AudioSessionManager.get(this)
+        bluetoothRouter = audioEngine.router
 
         setContent {
             PhoneMicTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color(0xFF101012)
+                    color = Color(0xFF090A0B)
                 ) {
                     PhoneMicScreen(
                         audioEngine = audioEngine,
                         bluetoothRouter = bluetoothRouter,
                         onStartForeground = { deviceName ->
-                            MicForegroundService.start(this, deviceName)
+                            // Session manager requests foreground service before opening streams.
                         },
                         onStopForeground = {
-                            MicForegroundService.stop(this)
+                            // Session manager owns service lifetime.
                         }
                     )
                 }
@@ -102,16 +106,15 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
-        bluetoothRouter.stopListening()
-        audioEngine.stop()
-        MicForegroundService.stop(this)
+        // Foreground service deliberately survives Activity destruction.
+        // Session manager owns service lifetime.
         super.onDestroy()
     }
 }
 
 @Composable
 fun PhoneMicScreen(
-    audioEngine: NativeAudioEngine,
+    audioEngine: AudioEngine,
     bluetoothRouter: BluetoothAudioRouter,
     onStartForeground: (String) -> Unit,
     onStopForeground: () -> Unit
@@ -124,6 +127,7 @@ fun PhoneMicScreen(
     var inputGainDb by remember { mutableFloatStateOf(0.0f) }
     var selectedPresetId by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
 
     // Permission check
     var hasPermissions by remember { mutableStateOf(false) }
@@ -146,7 +150,7 @@ fun PhoneMicScreen(
 
     val isActive = audioState is AudioState.Active
     val buttonColor by animateColorAsState(
-        targetValue = if (isActive) Color(0xFF00E676) else Color(0xFF26262C),
+        targetValue = if (isActive) Color(0xFF9955FF) else Color(0xFF26262C),
         animationSpec = tween(durationMillis = 250),
         label = "ButtonColor"
     )
@@ -161,6 +165,7 @@ fun PhoneMicScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
@@ -173,7 +178,7 @@ fun PhoneMicScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "PhoneMic",
+                    text = "CHITI / PhoneMic",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -182,7 +187,7 @@ fun PhoneMicScreen(
                     text = if (isActive) "● LIVE" else "READY",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (isActive) Color(0xFF00E676) else Color(0xFF8E8E93)
+                    color = if (isActive) Color(0xFF9955FF) else Color(0xFF9DA3AF)
                 )
             }
 
@@ -192,7 +197,7 @@ fun PhoneMicScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1E))
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF121416))
             ) {
                 Row(
                     modifier = Modifier
@@ -209,7 +214,7 @@ fun PhoneMicScreen(
                         Icon(
                             imageVector = Icons.Default.VolumeUp,
                             contentDescription = "Speaker",
-                            tint = Color(0xFF00E5FF)
+                            tint = Color(0xFF00D5FF)
                         )
                     }
 
@@ -217,15 +222,15 @@ fun PhoneMicScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = connectedDevice?.name ?: "No Bluetooth Speaker",
+                            text = connectedDevice?.name ?: "Phone speaker",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White
                         )
                         Text(
-                            text = if (connectedDevice != null) "Bluetooth • Connected" else "Connect speaker in Settings",
+                            text = if (connectedDevice != null) "Bluetooth • Connected" else "Keep volume low • Avoid feedback",
                             fontSize = 12.sp,
-                            color = Color(0xFF8E8E93)
+                            color = Color(0xFF9DA3AF)
                         )
                     }
 
@@ -235,10 +240,10 @@ fun PhoneMicScreen(
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = "126 ms  GOOD",
+                            text = "DELAY VARIES",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF00E676)
+                            color = Color(0xFF9955FF)
                         )
                     }
                 }
@@ -261,13 +266,16 @@ fun PhoneMicScreen(
                         color = if (isActive) Color(0xFF69F0AE) else Color(0xFF383842),
                         shape = CircleShape
                     )
-                    .clickable {
-                        scope.launch {
+                    .clickable(enabled = audioState != AudioState.Connecting) {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        if (!hasPermissions) {
+                            permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
+                        } else scope.launch {
                             if (isActive) {
                                 audioEngine.stop()
                                 onStopForeground()
                             } else {
-                                val devName = connectedDevice?.name ?: "Bluetooth Speaker"
+                                val devName = connectedDevice?.name ?: "Phone speaker"
                                 val started = audioEngine.start(devName, inputGainDb)
                                 if (started) onStartForeground(devName)
                             }
@@ -279,19 +287,23 @@ fun PhoneMicScreen(
                     Icon(
                         imageVector = if (isActive) Icons.Default.Mic else Icons.Default.MicOff,
                         contentDescription = "Microphone Toggle",
-                        tint = if (isActive) Color(0xFF101012) else Color.White,
+                        tint = if (isActive) Color(0xFF090A0B) else Color.White,
                         modifier = Modifier.size(64.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = if (isActive) "MIC ON" else "TAP TO TALK",
+                        text = when { isActive -> "MIC ON • TAP TO STOP"; audioState == AudioState.Connecting -> "CONNECTING"; audioState is AudioState.Muted -> "TAP TO RESUME"; else -> "TAP TO TALK" },
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isActive) Color(0xFF101012) else Color.White
+                        color = if (isActive) Color(0xFF090A0B) else Color.White
                     )
                 }
             }
 
+            (audioState as? AudioState.Error)?.let {
+                Text(it.message, color = MaterialTheme.colorScheme.error)
+            }
+            if (audioState is AudioState.Muted) Text("Paused. Resume only when safe.", color = Color(0xFFA3A9B0))
             Spacer(modifier = Modifier.height(28.dp))
 
             // VU Meter Representation
@@ -309,7 +321,7 @@ fun PhoneMicScreen(
                         .background(
                             if (normalizedRms > 0.85f) Color(0xFFFF5252)
                             else if (normalizedRms > 0.6f) Color(0xFFFFD600)
-                            else Color(0xFF00E676)
+                            else Color(0xFF9955FF)
                         )
                 )
             }
@@ -317,7 +329,7 @@ fun PhoneMicScreen(
             Text(
                 text = "${rmsDb.toInt()} dBFS",
                 fontSize = 11.sp,
-                color = Color(0xFF8E8E93)
+                color = Color(0xFF9DA3AF)
             )
         }
 
@@ -331,7 +343,7 @@ fun PhoneMicScreen(
                     text = "INPUT GAIN",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF8E8E93)
+                    color = Color(0xFF9DA3AF)
                 )
                 Text(
                     text = "${if (inputGainDb > 0) "+" else ""}${inputGainDb.toInt()} dB",
@@ -348,10 +360,10 @@ fun PhoneMicScreen(
                     audioEngine.setInputGain(it)
                 },
                 valueRange = -12.0f..12.0f,
-                steps = 23,
+                steps = 0,
                 colors = SliderDefaults.colors(
-                    thumbColor = Color(0xFF00E676),
-                    activeTrackColor = Color(0xFF00E676),
+                    thumbColor = Color(0xFF9955FF),
+                    activeTrackColor = Color(0xFF9955FF),
                     inactiveTrackColor = Color(0xFF26262C)
                 )
             )
@@ -362,7 +374,7 @@ fun PhoneMicScreen(
                 text = "VOICE PRESET",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF8E8E93)
+                color = Color(0xFF9DA3AF)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -373,7 +385,7 @@ fun PhoneMicScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
-                            .background(if (isSelected) Color(0xFF00E676) else Color(0xFF1E1E24))
+                            .background(if (isSelected) Color(0xFF9955FF) else Color(0xFF1E1E24))
                             .clickable {
                                 selectedPresetId = preset.id
                                 audioEngine.setVoicePreset(preset.id)
@@ -384,7 +396,7 @@ fun PhoneMicScreen(
                             text = preset.title,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            color = if (isSelected) Color(0xFF101012) else Color.White
+                            color = if (isSelected) Color(0xFF090A0B) else Color.White
                         )
                     }
                 }
@@ -395,5 +407,10 @@ fun PhoneMicScreen(
 
 @Composable
 fun PhoneMicTheme(content: @Composable () -> Unit) {
-    MaterialTheme(content = content)
+    MaterialTheme(colorScheme = androidx.compose.material3.darkColorScheme(
+        primary = Color(0xFF9955FF), secondary = Color(0xFF00D5FF),
+        background = Color(0xFF090A0B), surface = Color(0xFF121416),
+        onPrimary = Color(0xFF090A0B), onSurface = Color(0xFFFAFAFA),
+        error = Color(0xFFE83050)
+    ), content = content)
 }

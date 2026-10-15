@@ -127,20 +127,24 @@ NativeAudioEngine::~NativeAudioEngine() {
 bool NativeAudioEngine::start() {
     if (isRunning_.load()) return true;
 
+    ringBuffer_->reset();
+    isMuted_.store(false);
+    dcBlockerPrevX_ = dcBlockerPrevY_ = 0.0f;
+    hpfFilter_.reset(); eqMidFilter_.reset();
+    appliedPreset_ = -1;
+    smoothedGain_ = 0.0f;
     if (!openStreams()) {
+        closeStreams();
         LOGE("Failed to open audio streams");
         return false;
     }
 
-    ringBuffer_->reset();
     isRunning_.store(true);
     LOGI("Audio Engine successfully started");
     return true;
 }
 
 void NativeAudioEngine::stop() {
-    if (!isRunning_.load()) return;
-
     isRunning_.store(false);
     closeStreams();
     LOGI("Audio Engine stopped");
@@ -171,6 +175,8 @@ bool NativeAudioEngine::openStreams() {
               ->setSharingMode(oboe::SharingMode::Shared)
               ->setFormat(oboe::AudioFormat::Float)
               ->setChannelCount(oboe::ChannelCount::Mono)
+              ->setUsage(oboe::Usage::Media)
+              ->setContentType(oboe::ContentType::Speech)
               ->setSampleRate(static_cast<int32_t>(sampleRate_))
               ->setDataCallback(this);
 
@@ -181,8 +187,8 @@ bool NativeAudioEngine::openStreams() {
         return false;
     }
 
-    inputStream_->requestStart();
-    outputStream_->requestStart();
+    if (inputStream_->requestStart() != oboe::Result::OK) return false;
+    if (outputStream_->requestStart() != oboe::Result::OK) return false;
     return true;
 }
 
@@ -209,6 +215,10 @@ void NativeAudioEngine::setMuted(bool muted) {
 }
 
 void NativeAudioEngine::setVoicePreset(int presetId) {
+    requestedPreset_.store(presetId, std::memory_order_relaxed);
+}
+
+void NativeAudioEngine::applyVoicePreset(int presetId) {
     // 0: Natural, 1: Clear Speech, 2: Loud Speech, 3: Warm, 4: Outdoor
     switch (presetId) {
         case 1: // Clear Speech
@@ -247,6 +257,9 @@ int64_t NativeAudioEngine::getUnderrunCount() const {
 }
 
 void NativeAudioEngine::processDsp(float* buffer, int32_t numFrames) {
+    const int preset = requestedPreset_.load(std::memory_order_relaxed);
+    // Only the output callback owns filter state and coefficients.
+    if (preset != appliedPreset_) { applyVoicePreset(preset); appliedPreset_ = preset; }
     float gain = linearGain_.load(std::memory_order_relaxed);
     bool muted = isMuted_.load(std::memory_order_relaxed);
 
@@ -261,7 +274,8 @@ void NativeAudioEngine::processDsp(float* buffer, int32_t numFrames) {
     float peak = 0.0f;
 
     for (int32_t i = 0; i < numFrames; ++i) {
-        float x = buffer[i] * gain;
+        smoothedGain_ += 0.002f * (gain - smoothedGain_);
+        float x = buffer[i] * smoothedGain_;
 
         // 1. DC Blocker
         float yDc = x - dcBlockerPrevX_ + 0.995f * dcBlockerPrevY_;
@@ -304,7 +318,6 @@ oboe::DataCallbackResult NativeAudioEngine::onAudioReady(
 
     if (stream->getDirection() == oboe::Direction::Input) {
         // Microphone captured samples
-        processDsp(floatData, numFrames);
         ringBuffer_->write(floatData, static_cast<size_t>(numFrames));
     } else {
         // Output playback stream
@@ -313,6 +326,7 @@ oboe::DataCallbackResult NativeAudioEngine::onAudioReady(
             // Buffer underrun: fill remaining frames with silence
             std::fill(floatData + readCount, floatData + numFrames, 0.0f);
         }
+        processDsp(floatData, numFrames);
     }
 
     return oboe::DataCallbackResult::Continue;

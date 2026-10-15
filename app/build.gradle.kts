@@ -6,6 +6,7 @@ plugins {
 android {
     namespace = "com.chiti.phonemic"
     compileSdk = 34
+    ndkVersion = "26.1.10909125"
 
     defaultConfig {
         applicationId = "com.chiti.phonemic"
@@ -38,7 +39,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            // Release signing must be provided by the distributor, never use the debug key.
         }
     }
 

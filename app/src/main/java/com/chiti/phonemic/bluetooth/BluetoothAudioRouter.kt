@@ -27,12 +27,16 @@ class BluetoothAudioRouter(private val context: Context) {
     private val _connectedOutput = MutableStateFlow<ConnectedAudioDevice?>(null)
     val connectedOutput: StateFlow<ConnectedAudioDevice?> = _connectedOutput.asStateFlow()
 
+    var onOutputRemoved: (() -> Unit)? = null
+
     private val deviceCallback = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>?) {
             refreshAudioDevices()
         }
 
         override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>?) {
+            val currentId = _connectedOutput.value?.deviceInfo?.id
+            if (removedDevices?.any { it.id == currentId } == true) onOutputRemoved?.invoke()
             refreshAudioDevices()
         }
     }

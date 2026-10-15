@@ -22,7 +22,7 @@ class NativeAudioEngine : AudioEngine {
     }
 
     private var nativeHandle: Long = 0
-    private val scope = CoroutineScope(Dispatchers.Default)
+    private val scope = CoroutineScope(Dispatchers.Main.immediate)
     private var meterJob: Job? = null
 
     private val _audioState = MutableStateFlow<AudioState>(AudioState.Idle)
@@ -42,13 +42,14 @@ class NativeAudioEngine : AudioEngine {
         if (_audioState.value is AudioState.Active) return true
 
         _audioState.value = AudioState.Connecting
+        if (nativeHandle == 0L) nativeHandle = nativeCreate()
         setInputGain(initialGainDb)
 
         val success = nativeStart(nativeHandle)
         if (success) {
             _audioState.value = AudioState.Active(
                 outputDeviceName = outputDeviceName,
-                estimatedLatencyMs = 126,
+                estimatedLatencyMs = 0,
                 gainDb = initialGainDb,
                 presetId = 0
             )
@@ -64,6 +65,8 @@ class NativeAudioEngine : AudioEngine {
         meterJob?.cancel()
         meterJob = null
         nativeStop(nativeHandle)
+        if (nativeHandle != 0L) nativeDestroy(nativeHandle)
+        nativeHandle = 0L
         _audioState.value = AudioState.Idle
         _currentRmsDb.value = -96.0f
         _currentPeakDb.value = -96.0f

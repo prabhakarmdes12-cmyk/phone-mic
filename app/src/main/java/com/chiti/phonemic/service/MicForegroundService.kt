@@ -13,6 +13,10 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.chiti.phonemic.MainActivity
+import com.chiti.phonemic.audio.AudioSessionManager
+import com.chiti.phonemic.audio.AudioState
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collectLatest
 
 /**
  * Foreground service ensuring uninterrupted low-latency audio capture
@@ -45,10 +49,12 @@ class MicForegroundService : Service() {
             val intent = Intent(context, MicForegroundService::class.java).apply {
                 action = ACTION_STOP
             }
-            context.startService(intent)
+            context.stopService(Intent(context, MicForegroundService::class.java))
         }
     }
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val session by lazy { AudioSessionManager.get(this) }
     private var wakeLock: PowerManager.WakeLock? = null
     private var isMuted = false
     private var deviceName = "Bluetooth Speaker"
@@ -56,7 +62,12 @@ class MicForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        acquireWakeLock()
+        scope.launch {
+            session.audioState.collectLatest { state ->
+                isMuted = state is AudioState.Muted
+                if (state is AudioState.Active || state is AudioState.Muted) updateNotification()
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -64,13 +75,14 @@ class MicForegroundService : Service() {
             ACTION_START -> {
                 deviceName = intent.getStringExtra(EXTRA_DEVICE_NAME) ?: "Bluetooth Speaker"
                 startForegroundWithNotification()
+                acquireWakeLock()
+                scope.launch { if (!session.startFromService()) stopSelf() }
             }
             ACTION_STOP -> {
                 stopSelf()
             }
             ACTION_TOGGLE_MUTE -> {
-                isMuted = !isMuted
-                updateNotification()
+                session.setMuted(session.audioState.value !is AudioState.Muted)
             }
         }
         return START_NOT_STICKY
@@ -79,6 +91,8 @@ class MicForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        scope.cancel()
+        session.serviceDestroyed()
         releaseWakeLock()
         super.onDestroy()
     }
