@@ -81,4 +81,19 @@ class WavAudioRecorder(private val context: Context) {
         }
     }
     fun stop() { sink = null } // Writer drains asynchronously; no disk I/O on caller/audio thread.
+
+    fun getRecordings(): List<File> {
+        val directory = context.getExternalFilesDir(if (Build.VERSION.SDK_INT >= 31) Environment.DIRECTORY_RECORDINGS else "Recordings")
+            ?: return emptyList()
+        if (!directory.exists()) return emptyList()
+        return directory.listFiles { f -> f.extension.equals("wav", ignoreCase = true) }
+            ?.sortedByDescending { it.lastModified() }
+            ?: emptyList()
+    }
+
+    fun deleteRecording(file: File): Boolean {
+        return runCatching {
+            if (file.exists()) file.delete() else false
+        }.getOrDefault(false)
+    }
 }

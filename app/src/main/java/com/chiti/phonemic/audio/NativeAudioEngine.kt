@@ -115,7 +115,11 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
     }
 
     fun triggerSound(effect: Int) { nativeTriggerSound(nativeHandle, effect) }
+    fun setBgmTrack(trackId: Int) { nativeSetBgmTrack(nativeHandle, trackId) }
+    fun setBgmVolume(volume: Float) { nativeSetBgmVolume(nativeHandle, volume) }
     private external fun nativeTriggerSound(handle: Long, effect: Int)
+    private external fun nativeSetBgmTrack(handle: Long, trackId: Int)
+    private external fun nativeSetBgmVolume(handle: Long, volume: Float)
     private external fun nativeReadProcessed(handle: Long, target: ShortArray): Int
 
     private fun startMeteringLoop() {

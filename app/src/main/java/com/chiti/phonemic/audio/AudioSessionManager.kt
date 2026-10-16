@@ -40,17 +40,34 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     private var selectedReceiver: AudioReceiver? = null
     private var network: UdpAudioStreamer? = null
     private var preview: MediaPlayer? = null
+    private val playingFile = MutableStateFlow<File?>(null)
+    val currentlyPlaying = playingFile.asStateFlow()
+
+    private val recordingsList = MutableStateFlow<List<File>>(emptyList())
+    val recordings = recordingsList.asStateFlow()
+
+    private val selectedBgmTrack = MutableStateFlow(0)
+    val bgmTrack = selectedBgmTrack.asStateFlow()
+    private val selectedBgmVolume = MutableStateFlow(0.35f)
+    val bgmVolume = selectedBgmVolume.asStateFlow()
+
+    fun refreshRecordings() {
+        recordingsList.value = recorder.getRecordings()
+    }
+
     fun setRole(value: NetworkRole) {
         if (state.value is AudioState.Active || state.value == AudioState.Connecting) return
         stop(); discovery.stop(); selectedRole.value = value; selectedReceiver = null
         networkMessage.value = if (value == NetworkRole.STANDALONE) "Single phone" else "Trusted Wi-Fi only • unencrypted audio"
         if (value == NetworkRole.TRANSMITTER) discovery.discoverServices()
     }
+
     fun selectReceiver(receiver: AudioReceiver) {
         if (state.value is AudioState.Active || state.value == AudioState.Connecting) return
         selectedReceiver = receiver
         networkMessage.value = "Selected ${receiver.name} (${receiver.address.hostAddress})"
     }
+
     fun triggerSound(effect: Int) {
         if (state.value !is AudioState.Active) return
         when (val current = engine) {
@@ -58,24 +75,93 @@ class AudioSessionManager private constructor(private val context: Context) : Au
             is JavaAudioEngine -> current.soundboard.trigger(effect)
         }
     }
-    fun toggleRecording() {
-        if (recorder.state.value.recording) recorder.stop()
-        else if (state.value is AudioState.Active) recorder.start()
+
+    fun setBgmTrack(trackId: Int) {
+        selectedBgmTrack.value = trackId
+        when (val current = engine) {
+            is NativeAudioEngine -> current.setBgmTrack(trackId)
+            is JavaAudioEngine -> current.soundboard.setBgmTrack(trackId)
+        }
     }
-    fun playPreview() {
+
+    fun setBgmVolume(volume: Float) {
+        val clamped = volume.coerceIn(0f, 1f)
+        selectedBgmVolume.value = clamped
+        when (val current = engine) {
+            is NativeAudioEngine -> current.setBgmVolume(clamped)
+            is JavaAudioEngine -> current.soundboard.setBgmVolume(clamped)
+        }
+    }
+
+    fun toggleRecording() {
+        if (recorder.state.value.recording) {
+            recorder.stop()
+        } else if (state.value is AudioState.Active) {
+            recorder.start()
+        } else {
+            // Auto-start broadcasting and start recording immediately
+            scope.launch {
+                val started = start(deviceName, gain)
+                if (started) {
+                    delay(150)
+                    recorder.start()
+                }
+            }
+        }
+    }
+
+    fun playRecordingFile(file: File) {
         if (state.value is AudioState.Active || state.value == AudioState.Connecting) return
-        val file = recorder.state.value.file ?: return
-        preview?.release(); preview = null
+        stopPlayback()
         runCatching {
             preview = MediaPlayer().apply {
                 setDataSource(file.absolutePath)
-                setOnCompletionListener { it.release(); if (preview === it) preview = null }
-                setOnPreparedListener { it.start() }
-                setOnErrorListener { player, _, _ -> player.release(); if (preview === player) preview = null; true }
+                setOnCompletionListener {
+                    it.release()
+                    if (preview === it) preview = null
+                    playingFile.value = null
+                }
+                setOnPreparedListener {
+                    it.start()
+                    playingFile.value = file
+                }
+                setOnErrorListener { player, _, _ ->
+                    player.release()
+                    if (preview === player) preview = null
+                    playingFile.value = null
+                    true
+                }
                 prepareAsync()
             }
-        }.onFailure { preview?.release(); preview = null; networkMessage.value = "Preview unavailable" }
+        }.onFailure {
+            preview?.release()
+            preview = null
+            playingFile.value = null
+            networkMessage.value = "Playback error"
+        }
     }
+
+    fun stopPlayback() {
+        preview?.stop()
+        preview?.release()
+        preview = null
+        playingFile.value = null
+    }
+
+    fun deleteRecordingFile(file: File): Boolean {
+        if (playingFile.value?.absolutePath == file.absolutePath) {
+            stopPlayback()
+        }
+        val deleted = recorder.deleteRecording(file)
+        if (deleted) refreshRecordings()
+        return deleted
+    }
+
+    fun playPreview() {
+        val file = recorder.state.value.file ?: recordingsList.value.firstOrNull() ?: return
+        playRecordingFile(file)
+    }
+
     private var engine: AudioEngine? = null
     val activeEngineName: String
         get() = when (engine) {
@@ -98,6 +184,12 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     init {
         router.onOutputRemoved = { setMuted(true, MuteReason.BLUETOOTH_DISCONNECTED) }
         router.startListening()
+        refreshRecordings()
+        scope.launch {
+            recorder.state.collect { recState ->
+                if (!recState.recording) refreshRecordings()
+            }
+        }
     }
     override suspend fun start(outputDeviceName: String, initialGainDb: Float): Boolean {
         if (state.value is AudioState.Active || state.value == AudioState.Connecting) return true
@@ -107,7 +199,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         if (selectedRole.value == NetworkRole.TRANSMITTER && selectedReceiver == null) {
             state.value = AudioState.Error("Select a discovered receiver first"); return false
         }
-        preview?.release(); preview = null
+        stopPlayback()
         gain = initialGainDb; deviceName = outputDeviceName
         state.value = AudioState.Connecting
         return try { MicForegroundService.start(context, deviceName); true }
@@ -136,12 +228,17 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         try {
             if (selectedRole.value == NetworkRole.STANDALONE) candidate = NativeAudioEngine(recorder)
             candidate?.setVoicePreset(preset)
+            candidate?.setBgmTrack(selectedBgmTrack.value)
+            candidate?.setBgmVolume(selectedBgmVolume.value)
             if (candidate != null && !candidate.start(deviceName, gain)) { candidate.stop(); candidate = null }
         } catch (_: LinkageError) { candidate?.stop(); candidate = null }
           catch (_: Exception) { candidate?.stop(); candidate = null }
         if (candidate == null) {
-            candidate = JavaAudioEngine(context, selectedRole.value, network, recorder)
-            candidate.setVoicePreset(preset)
+            val javaEng = JavaAudioEngine(context, selectedRole.value, network, recorder)
+            javaEng.setVoicePreset(preset)
+            javaEng.soundboard.setBgmTrack(selectedBgmTrack.value)
+            javaEng.soundboard.setBgmVolume(selectedBgmVolume.value)
+            candidate = javaEng
             if (!candidate.start(deviceName, gain)) {
                 candidate.stop(); closeEngine()
                 state.value = AudioState.Error("Neither audio engine could start"); return false
@@ -170,6 +267,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         meters?.cancel(); meters = null
         engine?.stop(); engine = null
         recorder.stop()
+        stopPlayback()
         network?.stop(); network = null
         if (selectedRole.value == NetworkRole.RECEIVER) discovery.stop()
         audioManager.abandonAudioFocusRequest(focus)

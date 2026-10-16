@@ -70,6 +70,9 @@ public:
     size_t readProcessed(float* data, size_t count) { return recordBuffer_.read(data, count); }
     void triggerSound(int effect) { soundRequest_.store(((soundRequest_.load() + 4) & ~3) | effect); }
     float nextSound();
+    void setBgmTrack(int trackId);
+    void setBgmVolume(float volume);
+    float nextBgm();
     // Oboe Callbacks
     oboe::DataCallbackResult onAudioReady(
         oboe::AudioStream* stream,
@@ -122,6 +125,19 @@ private:
     // Compressor & Limiter State
     float compressorEnv_ = 0.0f;
     float sampleRate_ = 48000.0f;
+
+    // Reverb, Vocal Modulation & Delay (for Singing)
+    static constexpr size_t kDelayBufferSize = 16384;
+    std::vector<float> delayBuffer_{kDelayBufferSize, 0.0f};
+    size_t delayWriteIndex_ = 0;
+    float reverbFeedbackLp_ = 0.0f;
+    float lfoPhase_ = 0.0f;
+    float robotPhase_ = 0.0f;
+
+    // Continuous Background Music (BGM) Synthesizer
+    std::atomic<int> bgmTrack_{0};
+    std::atomic<float> bgmVolume_{0.35f};
+    int64_t bgmFrame_ = 0;
 };
 
 } // namespace phonemic

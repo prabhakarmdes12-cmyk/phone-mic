@@ -40,6 +40,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -49,6 +50,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -89,6 +92,7 @@ import com.chiti.phonemic.audio.AudioSessionManager
 import com.chiti.phonemic.audio.AudioState
 import com.chiti.phonemic.audio.MuteReason
 import com.chiti.phonemic.ui.SessionTools
+import com.chiti.phonemic.ui.RecordingsSheet
 import com.chiti.phonemic.model.NetworkRole
 import com.chiti.phonemic.bluetooth.BluetoothAudioRouter
 import com.chiti.phonemic.model.VoicePreset
@@ -145,6 +149,8 @@ fun PhoneMicScreen(
     val peakDb by audioEngine.currentPeakDb.collectAsState()
     val isFeedbackActive by audioEngine.isFeedbackActive.collectAsState()
     val networkRole by audioEngine.role.collectAsState()
+    val recordings by audioEngine.recordings.collectAsState()
+    val recordingState by audioEngine.recorder.state.collectAsState()
 
     var inputGainDb by remember { mutableFloatStateOf(0.0f) }
     var selectedPresetId by remember { mutableIntStateOf(0) }
@@ -154,6 +160,7 @@ fun PhoneMicScreen(
     // Dialog & Overlay States
     var showDistanceDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showRecordingsSheet by remember { mutableStateOf(false) }
     var isTouchLocked by remember { mutableStateOf(false) }
     var feedbackSuppressionOn by remember { mutableStateOf(true) }
     var keepScreenAwake by remember { mutableStateOf(true) }
@@ -212,8 +219,6 @@ fun PhoneMicScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            SessionTools(audioEngine)
-            Spacer(modifier = Modifier.height(14.dp))
             // Top Bar
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
@@ -237,6 +242,23 @@ fun PhoneMicScreen(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { showRecordingsSheet = true }) {
+                            BadgedBox(
+                                badge = {
+                                    if (recordings.isNotEmpty()) {
+                                        Badge(containerColor = Color(0xFF9955FF)) {
+                                            Text("${recordings.size}", color = Color.White, fontSize = 10.sp)
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FolderOpen,
+                                    contentDescription = "Recordings",
+                                    tint = if (recordings.isNotEmpty()) Color(0xFFC499FF) else Color(0xFF9DA3AF)
+                                )
+                            }
+                        }
                         IconButton(onClick = { showDistanceDialog = true }) {
                             Icon(
                                 imageVector = Icons.Default.Info,
@@ -349,6 +371,12 @@ fun PhoneMicScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(14.dp))
+            SessionTools(
+                session = audioEngine,
+                onOpenRecordings = { showRecordingsSheet = true }
+            )
+
             // Mode Selector Bar (Toggle vs Push-To-Talk)
             Spacer(modifier = Modifier.height(16.dp))
             Row(
@@ -387,6 +415,64 @@ fun PhoneMicScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(vertical = 24.dp)
             ) {
+                // Prominent Live Recording Banner
+                AnimatedVisibility(visible = recordingState.recording) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .padding(bottom = 16.dp)
+                            .clickable { audioEngine.toggleRecording() },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF2E0D12)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFEF4444))
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = "RECORDING LIVE AUDIO",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFFCA5A5)
+                                    )
+                                    Text(
+                                        text = "${recordingState.seconds / 60}:${(recordingState.seconds % 60).toString().padStart(2, '0')} • Tap to Stop",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFFDC2626))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "STOP",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Box(
                     modifier = Modifier
                         .size(200.dp)
@@ -746,6 +832,14 @@ fun PhoneMicScreen(
                         Text("CLOSE", color = Color(0xFF9955FF), fontWeight = FontWeight.Bold)
                     }
                 }
+            )
+        }
+
+        // Recordings Library Sheet
+        if (showRecordingsSheet) {
+            RecordingsSheet(
+                session = audioEngine,
+                onDismiss = { showRecordingsSheet = false }
             )
         }
     }

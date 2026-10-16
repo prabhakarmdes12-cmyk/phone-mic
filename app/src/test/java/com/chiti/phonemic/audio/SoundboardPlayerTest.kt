@@ -23,4 +23,37 @@ class SoundboardPlayerTest {
             assertTrue(samples.all { abs(it.toInt()) <= 30932 })
         }
     }
+    @Test fun bgmTracksProduceContinuousSoundAndStopWhenTurnedOff() {
+        for (track in 1..4) {
+            val player = SoundboardPlayer()
+            player.setBgmTrack(track)
+            player.setBgmVolume(0.5f)
+            assertEquals(track, player.currentBgmTrack())
+
+            var peak = 0f
+            repeat(48000) {
+                val value = player.nextBgm()
+                assertTrue(value.isFinite())
+                peak = maxOf(peak, abs(value))
+            }
+            assertTrue("Track $track peak should be > 0", peak > 0.01f)
+
+            // When turned off, nextBgm is immediately 0
+            player.setBgmTrack(0)
+            assertEquals(0f, player.nextBgm(), 0f)
+        }
+    }
+    @Test fun bgmPlusSfxPlusLoudMicNeverExceedsBrickwallLimiter() {
+        val player = SoundboardPlayer()
+        val dsp = SpeechDsp(player)
+        player.setBgmTrack(2) // Pop Groove
+        player.setBgmVolume(1.0f) // Max BGM
+        player.trigger(2) // Applause SFX
+        val samples = ShortArray(480) { 32767 } // Extreme mic input
+        repeat(100) {
+            samples.fill(32767)
+            dsp.process(samples, samples.size, 4.0f, 5) // Karaoke singing preset with reverb
+            assertTrue(samples.all { abs(it.toInt()) <= 30932 })
+        }
+    }
 }
