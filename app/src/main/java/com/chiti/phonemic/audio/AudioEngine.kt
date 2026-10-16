@@ -18,4 +18,6 @@ interface AudioEngine {
     fun setVoicePreset(presetId: Int)
     fun setFeedbackSuppression(enabled: Boolean)
     fun getUnderrunCount(): Long
+    fun setBgmTrack(trackId: Int) {}
+    fun setBgmVolume(volume: Float) {}
 }

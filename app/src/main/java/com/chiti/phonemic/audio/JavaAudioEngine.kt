@@ -125,7 +125,9 @@ class JavaAudioEngine(private val context: Context,
     // Session manager stops capture entirely on mute and requires an explicit new start.
     override fun setMuted(muted: Boolean, reason: MuteReason) { if (muted) stop() }
     override fun setInputGain(gainDb: Float) { gain = 10f.pow(gainDb.coerceIn(-12f, 12f) / 20f) }
-    override fun setVoicePreset(presetId: Int) { preset = presetId.coerceIn(0, 5) }
+    override fun setVoicePreset(presetId: Int) { preset = presetId.coerceIn(0, 8) }
     override fun setFeedbackSuppression(enabled: Boolean) = Unit // No adaptive notch in fallback.
     override fun getUnderrunCount(): Long = track?.underrunCount?.toLong() ?: 0L
+    override fun setBgmTrack(trackId: Int) { soundboard.setBgmTrack(trackId) }
+    override fun setBgmVolume(volume: Float) { soundboard.setBgmVolume(volume) }
 }

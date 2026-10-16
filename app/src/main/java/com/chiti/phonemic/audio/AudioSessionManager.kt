@@ -11,6 +11,7 @@ import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.chiti.phonemic.bluetooth.BluetoothAudioRouter
 import com.chiti.phonemic.service.MicForegroundService
+import java.io.File
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -76,21 +77,15 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         }
     }
 
-    fun setBgmTrack(trackId: Int) {
+    override fun setBgmTrack(trackId: Int) {
         selectedBgmTrack.value = trackId
-        when (val current = engine) {
-            is NativeAudioEngine -> current.setBgmTrack(trackId)
-            is JavaAudioEngine -> current.soundboard.setBgmTrack(trackId)
-        }
+        engine?.setBgmTrack(trackId)
     }
 
-    fun setBgmVolume(volume: Float) {
+    override fun setBgmVolume(volume: Float) {
         val clamped = volume.coerceIn(0f, 1f)
         selectedBgmVolume.value = clamped
-        when (val current = engine) {
-            is NativeAudioEngine -> current.setBgmVolume(clamped)
-            is JavaAudioEngine -> current.soundboard.setBgmVolume(clamped)
-        }
+        engine?.setBgmVolume(clamped)
     }
 
     fun toggleRecording() {
@@ -288,7 +283,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         }
     }
     override fun setInputGain(gainDb: Float) { gain = gainDb.coerceIn(-12f, 12f); engine?.setInputGain(gain) }
-    override fun setVoicePreset(presetId: Int) { preset = presetId.coerceIn(0, 5); engine?.setVoicePreset(preset) }
+    override fun setVoicePreset(presetId: Int) { preset = presetId.coerceIn(0, 8); engine?.setVoicePreset(preset) }
     override fun setFeedbackSuppression(enabled: Boolean) { engine?.setFeedbackSuppression(enabled) }
     override fun getUnderrunCount(): Long = engine?.getUnderrunCount() ?: 0
 }
