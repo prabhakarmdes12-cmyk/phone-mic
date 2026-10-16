@@ -17,8 +17,8 @@ class SoundboardPlayer(private val sampleRate: Int = 48000) {
     fun trigger(effect: Int) { request = ((request + 4) and -4) or effect.coerceIn(1, 3) }
 
     fun setBgmTrack(trackId: Int) {
+        if (bgmTrack != trackId) bgmFrame = 0L
         bgmTrack = trackId
-        if (trackId == 0) bgmFrame = 0L
     }
 
     fun setBgmVolume(volume: Float) {

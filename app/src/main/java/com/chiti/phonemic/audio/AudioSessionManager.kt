@@ -38,7 +38,8 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     val role = selectedRole.asStateFlow()
     private val networkMessage = MutableStateFlow("Single phone")
     val connectionStatus = networkMessage.asStateFlow()
-    private var selectedReceiver: AudioReceiver? = null
+    private val selectedReceiverFlow = MutableStateFlow<AudioReceiver?>(null)
+    val selectedReceiver = selectedReceiverFlow.asStateFlow()
     private var network: UdpAudioStreamer? = null
     private var preview: MediaPlayer? = null
     private val playingFile = MutableStateFlow<File?>(null)
@@ -58,14 +59,14 @@ class AudioSessionManager private constructor(private val context: Context) : Au
 
     fun setRole(value: NetworkRole) {
         if (state.value is AudioState.Active || state.value == AudioState.Connecting) return
-        stop(); discovery.stop(); selectedRole.value = value; selectedReceiver = null
+        stop(); discovery.stop(); selectedRole.value = value; selectedReceiverFlow.value = null
         networkMessage.value = if (value == NetworkRole.STANDALONE) "Single phone" else "Trusted Wi-Fi only • unencrypted audio"
         if (value == NetworkRole.TRANSMITTER) discovery.discoverServices()
     }
 
     fun selectReceiver(receiver: AudioReceiver) {
         if (state.value is AudioState.Active || state.value == AudioState.Connecting) return
-        selectedReceiver = receiver
+        selectedReceiverFlow.value = receiver
         networkMessage.value = "Selected ${receiver.name} (${receiver.address.hostAddress})"
     }
 
@@ -167,6 +168,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     private var meters: Job? = null
     private var gain = 0f
     private var preset = 0
+    private var feedbackSuppressionEnabled = true
     private var deviceName = "Phone speaker"
     val router = BluetoothAudioRouter(context)
     private val audioManager = context.getSystemService(AudioManager::class.java)
@@ -191,7 +193,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         if (selectedRole.value != NetworkRole.RECEIVER && ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             state.value = AudioState.Error("Microphone permission is required"); return false
         }
-        if (selectedRole.value == NetworkRole.TRANSMITTER && selectedReceiver == null) {
+        if (selectedRole.value == NetworkRole.TRANSMITTER && selectedReceiverFlow.value == null) {
             state.value = AudioState.Error("Select a discovered receiver first"); return false
         }
         stopPlayback()
@@ -209,7 +211,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         try {
             when (selectedRole.value) {
                 NetworkRole.TRANSMITTER -> {
-                    network = UdpAudioStreamer().also { it.startTransmitter(checkNotNull(selectedReceiver)) }
+                    network = UdpAudioStreamer().also { it.startTransmitter(checkNotNull(selectedReceiverFlow.value)) }
                 }
                 NetworkRole.RECEIVER -> {
                     network = UdpAudioStreamer().also { it.startReceiver() }
@@ -223,6 +225,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         try {
             if (selectedRole.value == NetworkRole.STANDALONE) candidate = NativeAudioEngine(recorder)
             candidate?.setVoicePreset(preset)
+            candidate?.setFeedbackSuppression(feedbackSuppressionEnabled)
             candidate?.setBgmTrack(selectedBgmTrack.value)
             candidate?.setBgmVolume(selectedBgmVolume.value)
             if (candidate != null && !candidate.start(deviceName, gain)) { candidate.stop(); candidate = null }
@@ -231,6 +234,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         if (candidate == null) {
             val javaEng = JavaAudioEngine(context, selectedRole.value, network, recorder)
             javaEng.setVoicePreset(preset)
+            javaEng.setFeedbackSuppression(feedbackSuppressionEnabled)
             javaEng.soundboard.setBgmTrack(selectedBgmTrack.value)
             javaEng.soundboard.setBgmVolume(selectedBgmVolume.value)
             candidate = javaEng
@@ -284,6 +288,9 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     }
     override fun setInputGain(gainDb: Float) { gain = gainDb.coerceIn(-12f, 12f); engine?.setInputGain(gain) }
     override fun setVoicePreset(presetId: Int) { preset = presetId.coerceIn(0, 8); engine?.setVoicePreset(preset) }
-    override fun setFeedbackSuppression(enabled: Boolean) { engine?.setFeedbackSuppression(enabled) }
+    override fun setFeedbackSuppression(enabled: Boolean) {
+        feedbackSuppressionEnabled = enabled
+        engine?.setFeedbackSuppression(enabled)
+    }
     override fun getUnderrunCount(): Long = engine?.getUnderrunCount() ?: 0
 }

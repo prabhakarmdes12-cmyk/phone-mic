@@ -98,12 +98,18 @@ class MicForegroundService : Service() {
     private fun startForegroundWithNotification() {
         val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                if (session.role.value == NetworkRole.RECEIVER) ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                else ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-            )
+            val type = when (session.role.value) {
+                NetworkRole.RECEIVER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                NetworkRole.TRANSMITTER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                NetworkRole.STANDALONE -> {
+                    if (Build.VERSION.SDK_INT >= 34) {
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                    } else {
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                    }
+                }
+            }
+            startForeground(NOTIFICATION_ID, notification, type)
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
@@ -137,13 +143,19 @@ class MicForegroundService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val statusText = if (isMuted) "MUTED — Tap to resume" else "LIVE — Broadcasting to $deviceName"
+        val isReceiver = session.role.value == NetworkRole.RECEIVER
+        val title = if (isReceiver) "PhoneMic Speaker Station 🔊" else "PhoneMic is Live 🎙️"
+        val statusText = when {
+            isMuted -> "MUTED — Tap to resume"
+            isReceiver -> "PLAYING — Receiving wireless audio"
+            else -> "LIVE — Broadcasting to $deviceName"
+        }
         val muteActionText = if (isMuted) "UNMUTE" else "MUTE"
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("PhoneMic is Live 🎙️")
+            .setContentTitle(title)
             .setContentText(statusText)
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
+            .setSmallIcon(if (isReceiver) android.R.drawable.ic_lock_silent_mode_off else android.R.drawable.ic_btn_speak_now)
             .setContentIntent(contentPendingIntent)
             .addAction(android.R.drawable.ic_media_pause, muteActionText, mutePendingIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "STOP", stopPendingIntent)

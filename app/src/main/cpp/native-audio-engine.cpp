@@ -133,6 +133,12 @@ bool NativeAudioEngine::start() {
     isMuted_.store(false);
     dcBlockerPrevX_ = dcBlockerPrevY_ = 0.0f;
     hpfFilter_.reset(); eqMidFilter_.reset();
+    std::fill(std::begin(delayBuffer_), std::end(delayBuffer_), 0.0f);
+    delayWriteIndex_ = 0;
+    reverbFeedbackLp_ = 0.0f;
+    lfoPhase_ = 0.0f;
+    robotPhase_ = 0.0f;
+    feedbackHoldFrames_ = 0;
     appliedPreset_ = -1;
     smoothedGain_ = 0.0f;
     if (!openStreams()) {
@@ -207,6 +213,12 @@ void NativeAudioEngine::closeStreams() {
         outputStream_->close();
         outputStream_.reset();
     }
+    std::fill(std::begin(delayBuffer_), std::end(delayBuffer_), 0.0f);
+    delayWriteIndex_ = 0;
+    reverbFeedbackLp_ = 0.0f;
+    lfoPhase_ = 0.0f;
+    robotPhase_ = 0.0f;
+    feedbackHoldFrames_ = 0;
 }
 
 void NativeAudioEngine::setInputGain(float gainDb) {
@@ -295,8 +307,8 @@ float NativeAudioEngine::nextSound() {
 }
 
 void NativeAudioEngine::setBgmTrack(int trackId) {
-    bgmTrack_.store(trackId, std::memory_order_relaxed);
-    if (trackId == 0) bgmFrame_ = 0;
+    int prev = bgmTrack_.exchange(trackId, std::memory_order_relaxed);
+    if (trackId != prev) bgmFrame_ = 0;
 }
 
 void NativeAudioEngine::setBgmVolume(float volume) {

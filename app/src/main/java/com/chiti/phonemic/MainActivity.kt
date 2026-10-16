@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -83,8 +84,10 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -173,8 +176,12 @@ fun PhoneMicScreen(
         onToggleScreenWake(keepScreenAwake)
     }
 
-    // Permission check
-    var hasPermissions by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var hasPermissions by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        )
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -517,6 +524,8 @@ fun PhoneMicScreen(
                                     scope.launch {
                                         if (isActive) {
                                             audioEngine.stop()
+                                        } else if (audioState is AudioState.Muted) {
+                                            audioEngine.setMuted(false)
                                         } else {
                                             val devName = connectedDevice?.name ?: "Phone speaker"
                                             audioEngine.start(devName, inputGainDb)
@@ -529,14 +538,21 @@ fun PhoneMicScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
-                            imageVector = if (isActive || isPttHolding) Icons.Default.Mic else Icons.Default.MicOff,
-                            contentDescription = "Microphone Toggle",
+                            imageVector = when {
+                                networkRole == NetworkRole.RECEIVER -> if (isActive) Icons.Default.VolumeUp else Icons.Default.VolumeOff
+                                isActive || isPttHolding -> Icons.Default.Mic
+                                else -> Icons.Default.MicOff
+                            },
+                            contentDescription = if (networkRole == NetworkRole.RECEIVER) "Speaker Station Toggle" else "Microphone Toggle",
                             tint = if (isActive || isPttHolding) Color(0xFF090A0B) else Color.White,
                             modifier = Modifier.size(64.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = when {
+                                networkRole == NetworkRole.RECEIVER && isActive -> "STATION PLAYING • STOP"
+                                networkRole == NetworkRole.RECEIVER && audioState == AudioState.Connecting -> "CONNECTING"
+                                networkRole == NetworkRole.RECEIVER -> "START SPEAKER STATION"
                                 micMode == MicOperationMode.PUSH_TO_TALK && isPttHolding -> "LIVE (PTT)"
                                 micMode == MicOperationMode.PUSH_TO_TALK -> "HOLD TO TALK"
                                 isActive -> "MIC ON • TAP TO STOP"
@@ -583,7 +599,7 @@ fun PhoneMicScreen(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "${rmsDb.toInt()} dBFS",
+                    text = if (isActive || isPttHolding) "${rmsDb.toInt()} dBFS" else "MIC ON STANDBY",
                     fontSize = 11.sp,
                     color = Color(0xFF9DA3AF)
                 )
@@ -658,6 +674,14 @@ fun PhoneMicScreen(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                val activePreset = VoicePreset.entries.firstOrNull { it.id == selectedPresetId } ?: VoicePreset.NATURAL
+                Text(
+                    text = activePreset.description,
+                    fontSize = 11.sp,
+                    color = Color(0xFFC499FF)
+                )
             }
         }
 
@@ -671,6 +695,9 @@ fun PhoneMicScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xF0090A0B))
+                    .pointerInput(Unit) {
+                        detectTapGestures { /* consume touches */ }
+                    }
                     .padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {

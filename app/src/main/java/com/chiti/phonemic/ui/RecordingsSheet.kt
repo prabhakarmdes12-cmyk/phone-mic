@@ -41,6 +41,12 @@ fun RecordingsSheet(
     var shareError by remember { mutableStateOf<String?>(null) }
     var fileToDelete by remember { mutableStateOf<File?>(null) }
 
+    DisposableEffect(Unit) {
+        onDispose {
+            session.stopPlayback()
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF121418),
@@ -289,7 +295,10 @@ private fun shareFile(context: Context, file: File, onError: (String) -> Unit) {
             clipData = android.content.ClipData.newRawUri("PhoneMic Recording", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Share PhoneMic Recording"))
+        val chooser = Intent.createChooser(intent, "Share PhoneMic Recording").apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(chooser)
     }.onFailure {
         onError("No compatible sharing app found")
     }

@@ -34,6 +34,7 @@ fun SessionTools(
     val receivers by session.discovery.receivers.collectAsState()
     val discoveryStatus by session.discovery.status.collectAsState()
     val connection by session.connectionStatus.collectAsState()
+    val selectedReceiver by session.selectedReceiver.collectAsState()
     val bgmTrack by session.bgmTrack.collectAsState()
     val bgmVolume by session.bgmVolume.collectAsState()
 
@@ -128,8 +129,21 @@ fun SessionTools(
                     Text("Scan for Speaker Stations", fontSize = 12.sp)
                 }
                 receivers.forEach { receiver ->
-                    OutlinedButton(onClick = { session.selectReceiver(receiver) }) {
-                        Text("${receiver.name} (${receiver.address.hostAddress})", fontSize = 12.sp)
+                    val isCurrent = receiver.address == selectedReceiver?.address
+                    OutlinedButton(
+                        onClick = { session.selectReceiver(receiver) },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (isCurrent) Color(0xFF3B2D54) else Color.Transparent
+                        ),
+                        border = ButtonDefaults.outlinedButtonBorder.copy(
+                            brush = androidx.compose.ui.graphics.SolidColor(if (isCurrent) Color(0xFF9955FF) else Color(0xFF383B4A))
+                        )
+                    ) {
+                        Text(
+                            text = if (isCurrent) "✓ ${receiver.name} (${receiver.address.hostAddress})" else "${receiver.name} (${receiver.address.hostAddress})",
+                            fontSize = 12.sp,
+                            color = if (isCurrent) Color(0xFFC499FF) else Color.White
+                        )
                     }
                 }
             }
@@ -296,9 +310,9 @@ fun SessionTools(
                         }
                     }
                     Text(
-                        text = "BGM and sounds are blended with speech and limited to -0.5 dBFS.",
+                        text = if (active) "BGM and sounds are blended with speech and limited to -0.5 dBFS." else "Start microphone to play sound cues and BGM into stream.",
                         fontSize = 10.sp,
-                        color = Color(0xFF6B7280)
+                        color = if (active) Color(0xFF6B7280) else Color(0xFFC499FF)
                     )
                 }
             }
