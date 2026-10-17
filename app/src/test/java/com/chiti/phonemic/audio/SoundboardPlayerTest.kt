@@ -62,14 +62,14 @@ class SoundboardPlayerTest {
         player.setBgmVolume(1.0f)
         player.setAutoDucking(true)
 
-        // Run silence for 500 samples
-        repeat(500) { player.nextBgmWithVoice(0.0f) }
-        val quietLevel = abs(player.nextBgmWithVoice(0.0f))
+        assertEquals(1.0f, player.currentDuckGain(), 0.01f)
 
         // Run loud speech for 2000 samples to trigger ducking attack
         repeat(2000) { player.nextBgmWithVoice(0.5f) }
-        val duckedLevel = abs(player.nextBgmWithVoice(0.5f))
+        assertTrue("Duck gain (${player.currentDuckGain()}) should be less than 0.5f", player.currentDuckGain() < 0.5f)
 
-        assertTrue("Ducked level ($duckedLevel) should be lower than quiet level ($quietLevel)", duckedLevel <= quietLevel)
+        // Run silence for 6000 samples to trigger release back towards 1.0f
+        repeat(6000) { player.nextBgmWithVoice(0.0f) }
+        assertTrue("Duck gain (${player.currentDuckGain()}) should recover above 0.7f", player.currentDuckGain() > 0.7f)
     }
 }

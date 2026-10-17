@@ -36,6 +36,7 @@ class SoundboardPlayer(private val sampleRate: Int = 48000) {
     }
 
     fun isAutoDucking(): Boolean = autoDuckingEnabled
+    fun currentDuckGain(): Float = duckGain
 
     fun nextSfx(): Float {
         val latest = request
