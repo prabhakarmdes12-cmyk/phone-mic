@@ -56,4 +56,20 @@ class SoundboardPlayerTest {
             assertTrue(samples.all { abs(it.toInt()) <= 30932 })
         }
     }
+    @Test fun autoDuckingAttenuatesBgmWhenVoiceActive() {
+        val player = SoundboardPlayer()
+        player.setBgmTrack(1)
+        player.setBgmVolume(1.0f)
+        player.setAutoDucking(true)
+
+        // Run silence for 500 samples
+        repeat(500) { player.nextBgmWithVoice(0.0f) }
+        val quietLevel = abs(player.nextBgmWithVoice(0.0f))
+
+        // Run loud speech for 2000 samples to trigger ducking attack
+        repeat(2000) { player.nextBgmWithVoice(0.5f) }
+        val duckedLevel = abs(player.nextBgmWithVoice(0.5f))
+
+        assertTrue("Ducked level ($duckedLevel) should be lower than quiet level ($quietLevel)", duckedLevel <= quietLevel)
+    }
 }

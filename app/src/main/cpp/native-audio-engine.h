@@ -73,6 +73,8 @@ public:
     void setBgmTrack(int trackId);
     void setBgmVolume(float volume);
     float nextBgm();
+    void setAutoDuckingEnabled(bool enabled);
+    bool isAutoDuckingEnabled() const { return autoDucking_.load(std::memory_order_relaxed); }
     // Oboe Callbacks
     oboe::DataCallbackResult onAudioReady(
         oboe::AudioStream* stream,
@@ -138,6 +140,10 @@ private:
     std::atomic<int> bgmTrack_{0};
     std::atomic<float> bgmVolume_{0.35f};
     int64_t bgmFrame_ = 0;
+
+    // Smart Auto-Ducking
+    std::atomic<bool> autoDucking_{true};
+    float duckGain_ = 1.0f;
 };
 
 } // namespace phonemic

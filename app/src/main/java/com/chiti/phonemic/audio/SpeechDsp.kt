@@ -89,7 +89,7 @@ class SpeechDsp(val soundboard: SoundboardPlayer = SoundboardPlayer()) {
             }
             delayWriteIndex = (delayWriteIndex + 1) % bufSize
 
-            val total = yProcessed + soundboard.next()
+            val total = yProcessed + soundboard.nextSfx() + soundboard.nextBgmWithVoice(yProcessed)
             y = total.coerceIn(-.944f, .944f)
             samples[i] = (y * 32767f).toInt().toShort()
             sum += y * y; peak = max(peak, abs(y))

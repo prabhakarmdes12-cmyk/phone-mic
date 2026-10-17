@@ -130,4 +130,5 @@ class JavaAudioEngine(private val context: Context,
     override fun getUnderrunCount(): Long = track?.underrunCount?.toLong() ?: 0L
     override fun setBgmTrack(trackId: Int) { soundboard.setBgmTrack(trackId) }
     override fun setBgmVolume(volume: Float) { soundboard.setBgmVolume(volume) }
+    override fun setAutoDucking(enabled: Boolean) { soundboard.setAutoDucking(enabled) }
 }

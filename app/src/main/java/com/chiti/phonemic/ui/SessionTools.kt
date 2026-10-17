@@ -37,6 +37,7 @@ fun SessionTools(
     val selectedReceiver by session.selectedReceiver.collectAsState()
     val bgmTrack by session.bgmTrack.collectAsState()
     val bgmVolume by session.bgmVolume.collectAsState()
+    val autoDucking by session.autoDucking.collectAsState()
 
     val active = audio is AudioState.Active
     val busy = active || audio == AudioState.Connecting
@@ -281,6 +282,36 @@ fun SessionTools(
                             ),
                             modifier = Modifier.height(28.dp)
                         )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Auto-Ducking (Speech Priority)",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "Ducks background music by -14dB when speaking",
+                                    fontSize = 10.sp,
+                                    color = Color(0xFF9DA3AF)
+                                )
+                            }
+                            Switch(
+                                checked = autoDucking,
+                                onCheckedChange = { session.setAutoDucking(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = Color(0xFF9955FF),
+                                    uncheckedThumbColor = Color(0xFF9DA3AF),
+                                    uncheckedTrackColor = Color(0xFF262936)
+                                )
+                            )
+                        }
                     }
 
                     HorizontalDivider(color = Color(0xFF282B36), modifier = Modifier.padding(vertical = 4.dp))

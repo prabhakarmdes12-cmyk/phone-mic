@@ -20,4 +20,5 @@ interface AudioEngine {
     fun getUnderrunCount(): Long
     fun setBgmTrack(trackId: Int) {}
     fun setBgmVolume(volume: Float) {}
+    fun setAutoDucking(enabled: Boolean) {}
 }

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.media.*
 import com.chiti.phonemic.model.NetworkRole
+import com.chiti.phonemic.model.ScenarioProfile
 import com.chiti.phonemic.network.*
 import android.os.Handler
 import android.os.Looper
@@ -52,6 +53,12 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     val bgmTrack = selectedBgmTrack.asStateFlow()
     private val selectedBgmVolume = MutableStateFlow(0.35f)
     val bgmVolume = selectedBgmVolume.asStateFlow()
+
+    private val selectedAutoDucking = MutableStateFlow(true)
+    val autoDucking = selectedAutoDucking.asStateFlow()
+
+    private val selectedScenario = MutableStateFlow<ScenarioProfile?>(null)
+    val scenarioProfile = selectedScenario.asStateFlow()
 
     fun refreshRecordings() {
         recordingsList.value = recorder.getRecordings()
@@ -228,6 +235,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
             candidate?.setFeedbackSuppression(feedbackSuppressionEnabled)
             candidate?.setBgmTrack(selectedBgmTrack.value)
             candidate?.setBgmVolume(selectedBgmVolume.value)
+            candidate?.setAutoDucking(selectedAutoDucking.value)
             if (candidate != null && !candidate.start(deviceName, gain)) { candidate.stop(); candidate = null }
         } catch (_: LinkageError) { candidate?.stop(); candidate = null }
           catch (_: Exception) { candidate?.stop(); candidate = null }
@@ -237,6 +245,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
             javaEng.setFeedbackSuppression(feedbackSuppressionEnabled)
             javaEng.soundboard.setBgmTrack(selectedBgmTrack.value)
             javaEng.soundboard.setBgmVolume(selectedBgmVolume.value)
+            javaEng.setAutoDucking(selectedAutoDucking.value)
             candidate = javaEng
             if (!candidate.start(deviceName, gain)) {
                 candidate.stop(); closeEngine()
@@ -293,4 +302,21 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         engine?.setFeedbackSuppression(enabled)
     }
     override fun getUnderrunCount(): Long = engine?.getUnderrunCount() ?: 0
+
+    override fun setAutoDucking(enabled: Boolean) {
+        selectedAutoDucking.value = enabled
+        engine?.setAutoDucking(enabled)
+    }
+
+    fun applyScenarioProfile(profile: ScenarioProfile) {
+        selectedScenario.value = profile
+        setVoicePreset(profile.recommendedPreset.id)
+        setInputGain(profile.defaultGainDb)
+        setAutoDucking(profile.autoDucking)
+        setFeedbackSuppression(profile.feedbackSuppression)
+    }
+
+    fun clearScenarioProfile() {
+        selectedScenario.value = null
+    }
 }

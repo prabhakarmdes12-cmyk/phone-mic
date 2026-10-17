@@ -28,6 +28,15 @@ class SoundboardPlayer(private val sampleRate: Int = 48000) {
     fun currentBgmTrack(): Int = bgmTrack
     fun currentBgmVolume(): Float = bgmVolume
 
+    @Volatile private var autoDuckingEnabled = true
+    private var duckGain = 1.0f
+
+    fun setAutoDucking(enabled: Boolean) {
+        autoDuckingEnabled = enabled
+    }
+
+    fun isAutoDucking(): Boolean = autoDuckingEnabled
+
     fun nextSfx(): Float {
         val latest = request
         if (latest != consumed) { consumed = latest; kind = latest and 3; frame = 0 }
@@ -105,6 +114,16 @@ class SoundboardPlayer(private val sampleRate: Int = 48000) {
             else -> 0.0
         }
         return (sample * vol).toFloat()
+    }
+
+    fun nextBgmWithVoice(voiceSample: Float): Float {
+        val bgm = nextBgm()
+        if (bgm == 0f) return 0f
+        if (!autoDuckingEnabled) return bgm
+        val target = if (abs(voiceSample) > 0.025f) 0.20f else 1.0f
+        val rate = if (target < duckGain) 0.003f else 0.0003f
+        duckGain += (target - duckGain) * rate
+        return bgm * duckGain
     }
 
     fun next(): Float {

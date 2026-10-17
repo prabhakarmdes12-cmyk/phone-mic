@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -99,6 +100,7 @@ import com.chiti.phonemic.ui.RecordingsSheet
 import com.chiti.phonemic.model.NetworkRole
 import com.chiti.phonemic.bluetooth.BluetoothAudioRouter
 import com.chiti.phonemic.model.VoicePreset
+import com.chiti.phonemic.model.ScenarioProfile
 import kotlinx.coroutines.launch
 
 enum class MicOperationMode(val label: String, val iconDescription: String) {
@@ -110,6 +112,28 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var audioEngine: AudioSessionManager
     private lateinit var bluetoothRouter: BluetoothAudioRouter
+    private var pttTrigger: ((Boolean) -> Unit)? = null
+    private var isPttActiveCheck: () -> Boolean = { false }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if ((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) &&
+            isPttActiveCheck()) {
+            if (event?.repeatCount == 0) {
+                pttTrigger?.invoke(true)
+            }
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        if ((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) &&
+            isPttActiveCheck()) {
+            pttTrigger?.invoke(false)
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -132,6 +156,10 @@ class MainActivity : ComponentActivity() {
                             } else {
                                 window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                             }
+                        },
+                        onRegisterPttHandler = { check, trigger ->
+                            isPttActiveCheck = check
+                            pttTrigger = trigger
                         }
                     )
                 }
@@ -144,7 +172,8 @@ class MainActivity : ComponentActivity() {
 fun PhoneMicScreen(
     audioEngine: AudioSessionManager,
     bluetoothRouter: BluetoothAudioRouter,
-    onToggleScreenWake: (Boolean) -> Unit
+    onToggleScreenWake: (Boolean) -> Unit,
+    onRegisterPttHandler: (isPttMode: () -> Boolean, trigger: ((Boolean) -> Unit)?) -> Unit = { _, _ -> }
 ) {
     val audioState by audioEngine.audioState.collectAsState()
     val connectedDevice by bluetoothRouter.connectedOutput.collectAsState()
@@ -154,6 +183,7 @@ fun PhoneMicScreen(
     val networkRole by audioEngine.role.collectAsState()
     val recordings by audioEngine.recordings.collectAsState()
     val recordingState by audioEngine.recorder.state.collectAsState()
+    val currentScenario by audioEngine.scenarioProfile.collectAsState()
 
     var inputGainDb by remember { mutableFloatStateOf(0.0f) }
     var selectedPresetId by remember { mutableIntStateOf(0) }
@@ -170,6 +200,34 @@ fun PhoneMicScreen(
 
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
+
+    // Wire hardware volume key PTT
+    DisposableEffect(micMode, connectedDevice, inputGainDb, audioState) {
+        onRegisterPttHandler(
+            { micMode == MicOperationMode.PUSH_TO_TALK },
+            { pressed ->
+                if (pressed) {
+                    isPttHolding = true
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    val devName = connectedDevice?.name ?: "Phone speaker"
+                    scope.launch {
+                        if (audioState is AudioState.Muted) {
+                            audioEngine.setMuted(false)
+                        } else if (audioState !is AudioState.Active) {
+                            audioEngine.start(devName, inputGainDb)
+                        }
+                    }
+                } else {
+                    isPttHolding = false
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    audioEngine.setMuted(true, MuteReason.PUSH_TO_TALK_RELEASED)
+                }
+            }
+        )
+        onDispose {
+            onRegisterPttHandler({ false }, null)
+        }
+    }
 
     // Keep screen awake default effect
     LaunchedEffect(keepScreenAwake) {
@@ -379,6 +437,100 @@ fun PhoneMicScreen(
             }
 
             Spacer(modifier = Modifier.height(14.dp))
+
+            // Scenario Optimization Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF14161C))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "CORE SCENARIOS",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF9DA3AF),
+                            letterSpacing = 1.sp
+                        )
+                        if (currentScenario != null) {
+                            Text(
+                                text = "Active Profile",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFFC499FF)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(ScenarioProfile.entries) { profile ->
+                            val isSelected = currentScenario == profile
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(if (isSelected) Color(0xFF9955FF) else Color(0xFF1E212B))
+                                    .clickable {
+                                        audioEngine.applyScenarioProfile(profile)
+                                        inputGainDb = profile.defaultGainDb
+                                        selectedPresetId = profile.recommendedPreset.id
+                                        if (profile.preferPtt) {
+                                            micMode = MicOperationMode.PUSH_TO_TALK
+                                        }
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(text = profile.iconEmoji, fontSize = 14.sp)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = profile.title,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) Color(0xFF090A0B) else Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    // Real-Time Distance Guidance
+                    val tip = currentScenario?.distanceTip ?: "Optimal mic distance: 5–10 cm from mouth for maximum clarity without feedback."
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF1C1F2A))
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = Color(0xFFC499FF),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = tip,
+                            fontSize = 11.sp,
+                            color = Color(0xFFCBD5E1),
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
             SessionTools(
                 session = audioEngine,
                 onOpenRecordings = { showRecordingsSheet = true }
@@ -554,7 +706,7 @@ fun PhoneMicScreen(
                                 networkRole == NetworkRole.RECEIVER && audioState == AudioState.Connecting -> "CONNECTING"
                                 networkRole == NetworkRole.RECEIVER -> "START SPEAKER STATION"
                                 micMode == MicOperationMode.PUSH_TO_TALK && isPttHolding -> "LIVE (PTT)"
-                                micMode == MicOperationMode.PUSH_TO_TALK -> "HOLD TO TALK"
+                                micMode == MicOperationMode.PUSH_TO_TALK -> "HOLD BUTTON / VOL KEYS"
                                 isActive -> "MIC ON • TAP TO STOP"
                                 audioState == AudioState.Connecting -> "CONNECTING"
                                 audioState is AudioState.Muted -> "TAP TO RESUME"

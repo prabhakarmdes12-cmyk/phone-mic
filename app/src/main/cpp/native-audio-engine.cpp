@@ -141,6 +141,7 @@ bool NativeAudioEngine::start() {
     feedbackHoldFrames_ = 0;
     appliedPreset_ = -1;
     smoothedGain_ = 0.0f;
+    duckGain_ = 1.0f;
     if (!openStreams()) {
         closeStreams();
         LOGE("Failed to open audio streams");
@@ -315,6 +316,10 @@ void NativeAudioEngine::setBgmVolume(float volume) {
     bgmVolume_.store(std::clamp(volume, 0.0f, 1.0f), std::memory_order_relaxed);
 }
 
+void NativeAudioEngine::setAutoDuckingEnabled(bool enabled) {
+    autoDucking_.store(enabled, std::memory_order_relaxed);
+}
+
 float NativeAudioEngine::nextBgm() {
     const int track = bgmTrack_.load(std::memory_order_relaxed);
     if (track <= 0) return 0.0f;
@@ -463,7 +468,15 @@ void NativeAudioEngine::processDsp(float* buffer, int32_t numFrames) {
 
         // 6. Brickwall Peak Limiter (-0.5 dBFS ceiling approx 0.944)
         const float ceiling = 0.944f;
-        float totalMix = yProcessed + nextSound() + nextBgm();
+        float bgm = nextBgm();
+        if (autoDucking_.load(std::memory_order_relaxed)) {
+            // Duck BGM by ~14 dB (0.20x) when voice exceeds -32 dBFS (0.025)
+            float target = (std::fabs(yProcessed) > 0.025f) ? 0.20f : 1.0f;
+            float rate = (target < duckGain_) ? 0.003f : 0.0003f; // ~35ms attack, ~650ms release
+            duckGain_ += (target - duckGain_) * rate;
+            bgm *= duckGain_;
+        }
+        float totalMix = yProcessed + nextSound() + bgm;
         float yLimited = std::clamp(totalMix, -ceiling, ceiling);
 
         buffer[i] = yLimited;
@@ -640,4 +653,10 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeSetBgmVolume(JNIEnv*, jobject, jlong handle, jfloat volume) {
     auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
     if (engine) engine->setBgmVolume(volume);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeSetAutoDucking(JNIEnv*, jobject, jlong handle, jboolean enabled) {
+    auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
+    if (engine) engine->setAutoDuckingEnabled(enabled);
 }
