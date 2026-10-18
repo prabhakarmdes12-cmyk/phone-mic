@@ -3,23 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PhoneMic — Real-Time Wireless Microphone & PA System (Beta Release)</title>
-  <meta name="description" content="Turn any Android phone into an ultra-low latency wireless microphone for Bluetooth speakers and PA systems. Native Oboe C++ engine, permanent safety limiter, singing reverb, and Wi-Fi relay. Free during public beta.">
+  <title>PhoneMic — Free Wireless Microphone App for Any Speaker</title>
+  <meta name="description" content="Turn your Android phone into a live wireless microphone for Bluetooth speakers and sound systems. No lag, ear safety protection, singing reverb, and no ads. Free public beta.">
   <meta name="theme-color" content="#070A11">
 
   <!-- Open Graph / Meta -->
-  <meta property="og:title" content="PhoneMic — Real-Time Wireless Microphone (Beta Release)">
-  <meta property="og:description" content="Turn your phone into a professional wireless PA microphone. Native C++ Oboe DSP, safety limiter, singing reverb, smart auto-ducking, and Wi-Fi broadcast. 100% free & open-source.">
+  <meta property="og:title" content="PhoneMic — Free Wireless Microphone App">
+  <meta property="og:description" content="Turn your phone into a live wireless microphone for any Bluetooth or PA speaker. Real-time sound, ear safety limiter, singing reverb, and zero ads.">
   <meta property="og:type" content="website">
 
-  <!-- Google Fonts: Outfit for display, Inter for body, JetBrains Mono for code/metrics -->
+  <!-- Google Fonts: Outfit for display, Inter for body, JetBrains Mono for metrics -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
     /* ============================================================
-       Chiti Technologies Unified Design System v3 — White Hat Edition
+       PhoneMic Design System
        WCAG AAA Standard: All text >= 7:1 contrast, large elements >= 4.5:1.
        ============================================================ */
     :root {
@@ -46,13 +46,14 @@
       --accent-amber: #FBBF24;        /* 11.1:1 (AAA) */
       --accent-red: #F87171;          /* 7.5:1 (AAA) */
 
-      /* Focus Indicator for Accessible Keyboard Navigation */
+      /* Focus Indicator */
       --focus-ring: #C4B5FD;
+      --focus-width: 3px;
 
       /* Borders & Glassmorphism */
-      --border-subtle: rgba(255, 255, 255, 0.12);
-      --border-strong: rgba(255, 255, 255, 0.22);
-      --border-brand: rgba(167, 139, 250, 0.35);
+      --border-subtle: rgba(255, 255, 255, 0.14);
+      --border-strong: rgba(255, 255, 255, 0.24);
+      --border-brand: rgba(167, 139, 250, 0.4);
 
       --radius-sm: 8px;
       --radius-md: 14px;
@@ -65,6 +66,63 @@
 
       --shadow-soft: 0 12px 36px -8px rgba(0, 0, 0, 0.6);
       --shadow-glow: 0 0 50px -10px rgba(139, 92, 246, 0.25);
+
+      --base-font-size: 16px;
+    }
+
+    /* Accessibility Overrides */
+    html {
+      font-size: var(--base-font-size);
+    }
+
+    /* Font size scaling */
+    html.font-large { --base-font-size: 18.5px; }
+    html.font-xlarge { --base-font-size: 21px; }
+
+    /* Ultra-High Contrast Mode */
+    html.high-contrast {
+      --bg-base: #000000;
+      --bg-subtle: #050505;
+      --surface-1: #0A0A0C;
+      --surface-2: #121216;
+      --surface-3: #1B1B22;
+      --text-body: #FFFFFF;
+      --text-muted: #F1F5F9;
+      --text-dim: #E2E8F0;
+      --border-subtle: #FFFFFF;
+      --border-strong: #FFFFFF;
+      --focus-ring: #FBBF24;
+      --focus-width: 4px;
+    }
+    html.high-contrast .scenario-card,
+    html.high-contrast .manifesto-card,
+    html.high-contrast .tech-card,
+    html.high-contrast .step-card,
+    html.high-contrast .lab-panel,
+    html.high-contrast .table-container {
+      border: 2px solid #FFFFFF !important;
+    }
+
+    /* Enhanced Focus Mode */
+    html.focus-enhanced :focus-visible {
+      outline: 4px solid var(--accent-amber) !important;
+      outline-offset: 4px !important;
+      box-shadow: 0 0 0 8px rgba(251, 191, 36, 0.35) !important;
+    }
+
+    /* Reduced Motion Mode */
+    html.reduced-motion *,
+    html.reduced-motion ::before,
+    html.reduced-motion ::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+    html.reduced-motion .phone-mockup {
+      transform: none !important;
+    }
+    html.reduced-motion #heroCanvas {
+      display: none !important;
     }
 
     * {
@@ -111,7 +169,7 @@
     button:focus-visible,
     input:focus-visible,
     [tabindex="0"]:focus-visible {
-      outline: 3px solid var(--focus-ring);
+      outline: var(--focus-width) solid var(--focus-ring);
       outline-offset: 3px;
     }
 
@@ -147,18 +205,18 @@
       z-index: 100;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      background: rgba(7, 10, 17, 0.85);
+      background: rgba(7, 10, 17, 0.88);
       border-bottom: 1px solid var(--border-subtle);
-      transition: background 0.3s ease;
     }
 
     .nav-container {
       max-width: 1180px;
       margin: 0 auto;
-      padding: 14px 24px;
+      padding: 12px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 16px;
     }
 
     .brand {
@@ -167,11 +225,12 @@
       gap: 12px;
       text-decoration: none;
       color: var(--text-main);
+      flex-shrink: 0;
     }
 
     .brand-icon {
-      width: 42px;
-      height: 42px;
+      width: 40px;
+      height: 40px;
       background: linear-gradient(135deg, #8B5CF6, #38BDF8);
       border-radius: var(--radius-sm);
       display: flex;
@@ -180,13 +239,6 @@
       box-shadow: 0 4px 16px rgba(139, 92, 246, 0.35);
       position: relative;
       overflow: hidden;
-    }
-
-    .brand-icon::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: linear-gradient(180deg, rgba(255,255,255,0.2), transparent);
     }
 
     .brand-text h1 {
@@ -220,11 +272,11 @@
     .nav-links {
       display: none;
       align-items: center;
-      gap: 24px;
+      gap: 22px;
       list-style: none;
     }
 
-    @media (min-width: 840px) {
+    @media (min-width: 890px) {
       .nav-links {
         display: flex;
       }
@@ -246,7 +298,49 @@
     .nav-actions {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    /* Accessibility Icon Button in Header */
+    .btn-a11y {
+      background: var(--surface-1);
+      color: var(--text-main);
+      border: 1px solid var(--border-strong);
+      padding: 8px 14px;
+      border-radius: var(--radius-pill);
+      font-weight: 700;
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-height: 40px;
+    }
+
+    .btn-a11y:hover {
+      background: var(--surface-2);
+      border-color: var(--brand);
+      color: var(--brand-bright);
+    }
+
+    .btn-a11y svg {
+      color: var(--brand-bright);
+      flex-shrink: 0;
+    }
+
+    .a11y-btn-text {
+      display: inline;
+    }
+
+    @media (max-width: 540px) {
+      .a11y-btn-text {
+        display: none;
+      }
+      .btn-a11y {
+        padding: 8px 10px;
+      }
     }
 
     .btn-nav {
@@ -262,6 +356,7 @@
       gap: 8px;
       transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
       box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
+      min-height: 40px;
     }
 
     .btn-nav:hover {
@@ -281,18 +376,18 @@
 
     /* ── Hero Section ── */
     .hero-section {
-      padding: 60px 0 50px;
+      padding: 50px 0 40px;
       text-align: center;
       position: relative;
     }
 
     @media (min-width: 960px) {
       .hero-section {
-        padding: 80px 0 60px;
+        padding: 70px 0 50px;
       }
     }
 
-    /* Beta Release & White Hat Banner */
+    /* Beta Release & Clean Badges */
     .hero-badge-row {
       display: flex;
       align-items: center;
@@ -345,18 +440,18 @@
 
     .hero-title {
       font-family: var(--font-display);
-      font-size: 2.75rem;
+      font-size: 2.6rem;
       font-weight: 900;
-      line-height: 1.1;
+      line-height: 1.15;
       letter-spacing: -0.03em;
       color: var(--text-main);
-      max-width: 960px;
+      max-width: 900px;
       margin: 0 auto 20px;
     }
 
     @media (min-width: 768px) {
       .hero-title {
-        font-size: 3.75rem;
+        font-size: 3.6rem;
       }
     }
 
@@ -369,15 +464,15 @@
     .hero-subtitle {
       font-size: 1.15rem;
       color: var(--text-muted);
-      max-width: 740px;
-      margin: 0 auto 36px;
+      max-width: 720px;
+      margin: 0 auto 34px;
       line-height: 1.7;
       font-weight: 400;
     }
 
     @media (min-width: 768px) {
       .hero-subtitle {
-        font-size: 1.25rem;
+        font-size: 1.22rem;
       }
     }
 
@@ -387,7 +482,7 @@
       align-items: center;
       justify-content: center;
       gap: 16px;
-      margin-bottom: 30px;
+      margin-bottom: 28px;
     }
 
     @media (min-width: 540px) {
@@ -409,8 +504,6 @@
       gap: 12px;
       box-shadow: 0 8px 28px rgba(139, 92, 246, 0.45);
       transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-      position: relative;
-      overflow: hidden;
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
@@ -447,7 +540,7 @@
       gap: 20px;
       flex-wrap: wrap;
       color: var(--text-dim);
-      font-size: 0.85rem;
+      font-size: 0.86rem;
       margin-top: 10px;
     }
 
@@ -457,7 +550,7 @@
       gap: 6px;
     }
 
-    /* ── Interactive 3D Phone & Live Audio Spectrum Showcase ── */
+    /* ── Interactive 3D Phone & Demo Showcase ── */
     .hero-interactive-showcase {
       display: grid;
       grid-template-columns: 1fr;
@@ -509,7 +602,7 @@
     }
 
     .mock-app-title {
-      font-size: 0.85rem;
+      font-size: 0.88rem;
       font-weight: 800;
       color: var(--text-main);
       letter-spacing: 0.04em;
@@ -574,8 +667,8 @@
       background: var(--surface-1);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-pill);
-      padding: 4px 10px;
-      font-size: 0.68rem;
+      padding: 5px 11px;
+      font-size: 0.72rem;
       font-weight: 600;
       color: var(--text-muted);
       cursor: pointer;
@@ -590,7 +683,7 @@
       font-weight: 700;
     }
 
-    /* Giant Mic Toggle Button */
+    /* Giant Mic Button */
     .mock-mic-action {
       background: var(--surface-1);
       border: 1px solid var(--border-subtle);
@@ -610,8 +703,8 @@
     }
 
     .mock-mic-circle {
-      width: 90px;
-      height: 90px;
+      width: 88px;
+      height: 88px;
       border-radius: 50%;
       background: linear-gradient(135deg, #261D38, #161822);
       border: 3px solid #383848;
@@ -620,7 +713,6 @@
       justify-content: center;
       color: var(--text-dim);
       transition: all 0.3s ease;
-      position: relative;
     }
 
     .mock-mic-circle.live {
@@ -638,7 +730,7 @@
 
     .mock-mic-label {
       margin-top: 10px;
-      font-size: 0.74rem;
+      font-size: 0.76rem;
       font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
@@ -682,13 +774,13 @@
     .mock-vu-bar.amber { background: var(--accent-amber); }
     .mock-vu-bar.red { background: var(--accent-red); }
 
-    /* Phone Distance Guidance Tip */
+    /* Distance Tip */
     .mock-distance-tip {
       background: rgba(167, 139, 250, 0.1);
       border: 1px solid rgba(167, 139, 250, 0.25);
       border-radius: var(--radius-sm);
       padding: 8px 10px;
-      font-size: 0.70rem;
+      font-size: 0.72rem;
       color: var(--brand-bright);
       line-height: 1.4;
       display: flex;
@@ -696,7 +788,7 @@
       gap: 6px;
     }
 
-    /* ── Hero Side Panel: The Live Web Audio Lab ── */
+    /* ── Side Panel: Live Sound Lab ── */
     .lab-panel {
       background: var(--surface-1);
       border: 1px solid var(--border-strong);
@@ -707,22 +799,11 @@
       overflow: hidden;
     }
 
-    .lab-panel::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      right: 0;
-      width: 200px;
-      height: 200px;
-      background: radial-gradient(circle, rgba(167, 139, 250, 0.12) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
     .lab-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       flex-wrap: wrap;
       gap: 10px;
     }
@@ -779,7 +860,7 @@
     }
 
     .lab-card h4 {
-      font-size: 0.88rem;
+      font-size: 0.9rem;
       font-weight: 700;
       color: var(--text-main);
       display: flex;
@@ -788,16 +869,16 @@
     }
 
     .lab-card p {
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       color: var(--text-muted);
-      line-height: 1.45;
+      line-height: 1.5;
     }
 
     .lab-btn {
       background: var(--surface-3);
       border: 1px solid var(--border-strong);
       color: var(--text-main);
-      padding: 8px 14px;
+      padding: 9px 14px;
       border-radius: var(--radius-sm);
       font-size: 0.82rem;
       font-weight: 700;
@@ -821,7 +902,7 @@
       border-color: #FFFFFF;
     }
 
-    /* Distance Slider Control */
+    /* Distance Slider */
     .lab-slider-row {
       display: flex;
       align-items: center;
@@ -833,13 +914,14 @@
       flex: 1;
       accent-color: var(--brand);
       cursor: pointer;
+      height: 6px;
     }
 
     /* ── Section Structure ── */
     .section-header {
       text-align: center;
       max-width: 760px;
-      margin: 80px auto 40px;
+      margin: 70px auto 36px;
     }
 
     .section-eyebrow {
@@ -854,16 +936,16 @@
 
     .section-title {
       font-family: var(--font-display);
-      font-size: 2.2rem;
+      font-size: 2.1rem;
       font-weight: 800;
       color: var(--text-main);
       line-height: 1.2;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     @media (min-width: 768px) {
       .section-title {
-        font-size: 2.6rem;
+        font-size: 2.5rem;
       }
     }
 
@@ -873,7 +955,7 @@
       line-height: 1.65;
     }
 
-    /* ── White Hat Standard Manifesto ── */
+    /* ── Our Promise / Manifesto Section ── */
     .white-hat-manifesto {
       background: linear-gradient(180deg, var(--surface-1) 0%, var(--surface-2) 100%);
       border: 1px solid var(--border-strong);
@@ -897,7 +979,7 @@
     }
 
     .manifesto-card {
-      padding: 22px;
+      padding: 24px;
       border-radius: var(--radius-md);
     }
 
@@ -914,7 +996,7 @@
     .manifesto-card h3 {
       font-size: 1.15rem;
       font-weight: 800;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -927,15 +1009,15 @@
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
     }
 
     .manifesto-list li {
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      line-height: 1.5;
+      line-height: 1.55;
       color: var(--text-body);
     }
 
@@ -944,7 +1026,7 @@
       margin-top: 3px;
     }
 
-    /* ── Wise Competitive Analysis Matrix ── */
+    /* ── Competitive Matrix ── */
     .table-container {
       width: 100%;
       overflow-x: auto;
@@ -1014,7 +1096,7 @@
       gap: 6px;
     }
 
-    /* ── Core Scenarios Bento Grid ── */
+    /* ── Everyday Scenarios ── */
     .scenarios-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -1078,7 +1160,7 @@
     }
 
     .scenario-card p {
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       color: var(--text-muted);
       line-height: 1.6;
       margin-bottom: 16px;
@@ -1097,7 +1179,7 @@
       border: 1px solid rgba(56, 189, 248, 0.2);
     }
 
-    /* ── Engineering Features Bento ── */
+    /* ── Engineering Features ── */
     .tech-bento-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -1144,12 +1226,12 @@
     }
 
     .tech-content p {
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       color: var(--text-muted);
       line-height: 1.6;
     }
 
-    /* ── 3-Step Install Cards ── */
+    /* ── 3-Step Install ── */
     .steps-grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -1189,18 +1271,18 @@
     }
 
     .step-card p {
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       color: var(--text-muted);
       line-height: 1.6;
     }
 
-    /* ── Tech Specs Table ── */
+    /* ── Specs Table ── */
     .specs-card {
       background: var(--surface-1);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
       padding: 28px;
-      margin-top: 60px;
+      margin-top: 50px;
     }
 
     .specs-table {
@@ -1259,7 +1341,169 @@
       text-decoration: underline;
     }
 
-    /* Reduced Motion Handling */
+    /* ── Accessible Modal Dialog ── */
+    .a11y-modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 2000;
+    }
+
+    .a11y-modal-card {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 480px;
+      background: var(--surface-1);
+      border: 2px solid var(--border-brand);
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 40px rgba(167, 139, 250, 0.25);
+      z-index: 2001;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .a11y-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+
+    .a11y-icon-badge {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      background: rgba(167, 139, 250, 0.15);
+      color: var(--brand-bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .a11y-close-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .a11y-close-btn:hover {
+      background: var(--surface-3);
+      color: var(--text-main);
+      border-color: var(--border-strong);
+    }
+
+    .a11y-modal-body {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .a11y-setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+    }
+
+    .a11y-setting-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .a11y-setting-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .a11y-setting-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .a11y-toggle-group {
+      display: flex;
+      background: var(--surface-1);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-pill);
+      padding: 3px;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    .a11y-pill-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: var(--radius-pill);
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .a11y-pill-btn:hover {
+      color: var(--text-main);
+    }
+
+    .a11y-pill-btn.active {
+      background: var(--brand);
+      color: var(--text-inverted);
+      box-shadow: 0 2px 8px rgba(167, 139, 250, 0.4);
+    }
+
+    .a11y-footer-note {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      line-height: 1.45;
+    }
+
+    .a11y-reset-link {
+      background: none;
+      border: none;
+      color: var(--brand-bright);
+      text-decoration: underline;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      padding: 0;
+      width: fit-content;
+    }
+
+    /* System Reduced Motion Detection */
     @media (prefers-reduced-motion: reduce) {
       *, ::before, ::after {
         animation-delay: -1ms !important;
@@ -1300,28 +1544,40 @@
           <h1>PhoneMic</h1>
           <div class="brand-tag">
             <span class="brand-tag-dot"></span>
-            <span>BETA RELEASE • FREE</span>
+            <span>FREE PUBLIC BETA</span>
           </div>
         </div>
       </a>
 
       <nav aria-label="Main Navigation">
         <ul class="nav-links">
-          <li><a href="#demo" class="nav-link">Audio Lab</a></li>
-          <li><a href="#scenarios" class="nav-link">Core Scenarios</a></li>
-          <li><a href="#manifesto" class="nav-link">White-Hat Promise</a></li>
-          <li><a href="#comparison" class="nav-link">Competitive Matrix</a></li>
-          <li><a href="#specs" class="nav-link">Architecture</a></li>
+          <li><a href="#demo" class="nav-link">Try Demo</a></li>
+          <li><a href="#scenarios" class="nav-link">Everyday Uses</a></li>
+          <li><a href="#manifesto" class="nav-link">Our Promise</a></li>
+          <li><a href="#comparison" class="nav-link">Compare</a></li>
+          <li><a href="#specs" class="nav-link">Under the Hood</a></li>
         </ul>
       </nav>
 
       <div class="nav-actions">
-        <a href="https://github.com/prabhakarmdes12-cmyk/phone-mic" target="_blank" rel="noopener" class="btn-secondary" style="padding: 8px 16px; font-size: 0.85rem;" aria-label="GitHub Repository">
+        <!-- Visible WCAG AAA Accessibility Controller Button -->
+        <button id="a11yToggleBtn" class="btn-a11y" aria-label="Open accessibility options (motion, contrast, text size)" aria-haspopup="dialog" aria-expanded="false" aria-controls="a11yModal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="4.5" r="2.5"/>
+            <path d="M4 8.5h16"/>
+            <path d="M12 8.5v7"/>
+            <path d="m8 20 4-4.5 4 4.5"/>
+          </svg>
+          <span class="a11y-btn-text">Accessibility</span>
+        </button>
+
+        <a href="https://github.com/prabhakarmdes12-cmyk/phone-mic" target="_blank" rel="noopener" class="btn-secondary" style="padding: 8px 16px; font-size: 0.85rem;" aria-label="View PhoneMic on GitHub">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"/>
           </svg>
           <span>GitHub</span>
         </a>
+
         <a href="app-debug.apk" class="btn-nav" id="navDownloadBtn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -1334,6 +1590,92 @@
     </div>
   </header>
 
+  <!-- Accessible Modal Popup for Settings -->
+  <div id="a11yModal" class="a11y-modal-container" role="dialog" aria-labelledby="a11yHeading" aria-modal="true" style="display:none;">
+    <div class="a11y-modal-backdrop" id="a11yBackdrop"></div>
+    <div class="a11y-modal-card">
+      <div class="a11y-modal-header">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="a11y-icon-badge" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="12" cy="4.5" r="2.5"/>
+              <path d="M4 8.5h16"/>
+              <path d="M12 8.5v7"/>
+              <path d="m8 20 4-4.5 4 4.5"/>
+            </svg>
+          </div>
+          <div>
+            <h2 id="a11yHeading" style="font-size:1.15rem; font-weight:800; color:var(--text-main); line-height:1.2;">Accessibility Settings</h2>
+            <span style="font-size:0.75rem; color:var(--accent-emerald); font-weight:700;">WCAG 2.1 Level AAA Compliant</span>
+          </div>
+        </div>
+        <button id="a11yCloseBtn" class="a11y-close-btn" aria-label="Close accessibility settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="a11y-modal-body">
+        <!-- Setting 1: Motion & Animations -->
+        <div class="a11y-setting-row">
+          <div class="a11y-setting-info">
+            <span class="a11y-setting-title">Animations & Movement</span>
+            <span class="a11y-setting-desc">Pause background waves and phone tilt.</span>
+          </div>
+          <div class="a11y-toggle-group" role="radiogroup" aria-label="Animations toggle">
+            <button class="a11y-pill-btn active" id="btnMotionOn" role="radio" aria-checked="true">On</button>
+            <button class="a11y-pill-btn" id="btnMotionOff" role="radio" aria-checked="false">Off</button>
+          </div>
+        </div>
+
+        <!-- Setting 2: Contrast Mode -->
+        <div class="a11y-setting-row">
+          <div class="a11y-setting-info">
+            <span class="a11y-setting-title">High Contrast & Borders</span>
+            <span class="a11y-setting-desc">Thick outlines and pure black backgrounds.</span>
+          </div>
+          <div class="a11y-toggle-group" role="radiogroup" aria-label="Contrast toggle">
+            <button class="a11y-pill-btn active" id="btnContrastDefault" role="radio" aria-checked="true">Default</button>
+            <button class="a11y-pill-btn" id="btnContrastHigh" role="radio" aria-checked="false">High</button>
+          </div>
+        </div>
+
+        <!-- Setting 3: Font Size Scaling -->
+        <div class="a11y-setting-row">
+          <div class="a11y-setting-info">
+            <span class="a11y-setting-title">Text Size</span>
+            <span class="a11y-setting-desc">Make text larger for comfortable reading.</span>
+          </div>
+          <div class="a11y-toggle-group" role="radiogroup" aria-label="Text size options">
+            <button class="a11y-pill-btn active" id="btnFontNormal" role="radio" aria-checked="true">100%</button>
+            <button class="a11y-pill-btn" id="btnFontLarge" role="radio" aria-checked="false">115%</button>
+            <button class="a11y-pill-btn" id="btnFontXLarge" role="radio" aria-checked="false">130%</button>
+          </div>
+        </div>
+
+        <!-- Setting 4: Focus Indicator -->
+        <div class="a11y-setting-row">
+          <div class="a11y-setting-info">
+            <span class="a11y-setting-title">Focus Outlines</span>
+            <span class="a11y-setting-desc">Highlight keyboard-focused items with high-visibility amber rings.</span>
+          </div>
+          <div class="a11y-toggle-group" role="radiogroup" aria-label="Focus outline toggle">
+            <button class="a11y-pill-btn active" id="btnFocusNormal" role="radio" aria-checked="true">Normal</button>
+            <button class="a11y-pill-btn" id="btnFocusEnhanced" role="radio" aria-checked="false">Enhanced</button>
+          </div>
+        </div>
+
+        <!-- A11y Verification Badge & Reset -->
+        <div class="a11y-footer-note">
+          <span>All text combinations are verified >= 7:1 contrast. Your preferences are saved automatically in your browser.</span>
+          <button id="btnA11yReset" class="a11y-reset-link">Reset all accessibility options</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Main Content Area -->
   <main id="main-content">
 
@@ -1342,19 +1684,19 @@
       <div class="hero-badge-row">
         <div class="badge-pill brand-pill">
           <span class="pulse-dot"></span>
-          <span>BETA RELEASE v1.2 — 100% FREE FOR LIMITED TIME</span>
+          <span>BETA RELEASE — FREE FOR A LIMITED TIME</span>
         </div>
         <div class="badge-pill white-hat-pill">
-          <span>🛡️ WHITE-HAT AUDITED: ZERO ADS • 0 CLOUD TELEMETRY</span>
+          <span>🛡️ NO ADS • NO TRACKING • 100% ON-DEVICE</span>
         </div>
       </div>
 
       <h1 class="hero-title" id="hero-heading">
-        Turn Any Phone into a <span class="text-gradient">Pro Wireless PA Microphone</span>
+        Turn your phone into a <span class="text-gradient">live wireless microphone</span>
       </h1>
 
       <p class="hero-subtitle">
-        Ultra-low latency audio processing powered by Google Oboe C++. Features permanent acoustic feedback rejection, studio vocal reverb, smart auto-ducking music, and two-phone Wi-Fi broadcast.
+        Plug into any Bluetooth speaker or sound system with zero lag. Includes built-in ear protection against feedback shrieks, singing reverb, and background music that lowers automatically when you talk.
       </p>
 
       <div class="hero-cta-group">
@@ -1364,36 +1706,36 @@
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" x2="12" y1="15" y2="3"/>
           </svg>
-          <span>Download Beta APK (22 MB)</span>
+          <span>Download Free APK (22 MB)</span>
         </a>
 
         <a href="#demo" class="btn-secondary">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <polygon points="5 3 19 12 5 21 5 3"/>
           </svg>
-          <span>Test Sound Engine in Browser</span>
+          <span>Try the Live Sound Demo</span>
         </a>
       </div>
 
       <div class="hero-trust-bar">
         <span class="hero-trust-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-          <span>-0.5 dBFS Brickwall Ear Safety</span>
+          <span>Ear safety limiter (no sudden shrieks)</span>
         </span>
         <span>•</span>
         <span class="hero-trust-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          <span>Sub-10ms Native C++ Buffer</span>
+          <span>Real-time speech with no lag</span>
         </span>
         <span>•</span>
         <span class="hero-trust-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-          <span>100% WCAG AAA Compliant</span>
+          <span>WCAG AAA Accessible</span>
         </span>
       </div>
     </section>
 
-    <!-- Interactive 3D Phone & Web Audio Lab -->
+    <!-- Interactive 3D Phone & Demo -->
     <section id="demo" class="hero-interactive-showcase" aria-labelledby="demo-heading">
       
       <!-- 3D Phone Mockup (Tracks Mouse Tilt) -->
@@ -1401,7 +1743,7 @@
         <div class="phone-mockup" id="interactivePhone" role="region" aria-label="Interactive Phone Demonstration">
           <div class="phone-screen">
             <div class="mock-topbar">
-              <span class="mock-app-title">CHITI / PHONEMIC</span>
+              <span class="mock-app-title">PHONEMIC</span>
               <div class="mock-status-pill" id="mockStatusPill">
                 <span class="brand-tag-dot"></span>
                 <span id="mockStatusText">READY</span>
@@ -1418,38 +1760,38 @@
                 </svg>
               </div>
               <div class="mock-device-info">
-                <h4>JBL PartyBox 310</h4>
-                <p>Bluetooth PA Output • Sub-10ms Oboe</p>
+                <h4>Bluetooth Speaker</h4>
+                <p>Connected • Zero Lag Engine</p>
               </div>
             </div>
 
             <!-- Core Scenario Selector -->
             <div>
-              <div style="font-size:0.68rem; font-weight:700; color:var(--text-muted); margin-bottom:6px; font-family:var(--font-mono);">
-                SCENARIO OPTIMIZATION
+              <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); margin-bottom:6px; font-family:var(--font-mono);">
+                CHOOSE YOUR MODE
               </div>
               <div class="mock-scenarios-row" role="tablist">
                 <button class="mock-scenario-chip active" id="chipClassroom" role="tab" aria-selected="true">🎓 Classroom</button>
                 <button class="mock-scenario-chip" id="chipFitness" role="tab" aria-selected="false">⚡ Fitness</button>
                 <button class="mock-scenario-chip" id="chipTour" role="tab" aria-selected="false">🏛️ Tour</button>
                 <button class="mock-scenario-chip" id="chipKaraoke" role="tab" aria-selected="false">🎤 Singing</button>
-                <button class="mock-scenario-chip" id="chipWarehouse" role="tab" aria-selected="false">🏭 PTT Dispatch</button>
+                <button class="mock-scenario-chip" id="chipWarehouse" role="tab" aria-selected="false">🏭 Push-to-Talk</button>
               </div>
             </div>
 
             <!-- VU Meter -->
             <div class="mock-vu-box">
               <div class="mock-vu-header">
-                <span>INPUT LEVEL</span>
-                <span id="mockDbText" style="color:var(--accent-emerald);">-12 dBFS</span>
+                <span>MIC LEVEL</span>
+                <span id="mockDbText" style="color:var(--accent-emerald);">-12 dB</span>
               </div>
               <div class="mock-vu-bars" id="phoneVuBars" aria-hidden="true">
                 <!-- Dynamically generated bars -->
               </div>
             </div>
 
-            <!-- Interactive Giant Broadcast Button -->
-            <div class="mock-mic-action" id="mockMicBtn" role="button" tabindex="0" aria-label="Toggle Broadcast Simulation">
+            <!-- Interactive Big Button -->
+            <div class="mock-mic-action" id="mockMicBtn" role="button" tabindex="0" aria-label="Toggle Microphone Broadcast">
               <div class="mock-mic-circle" id="mockMicCircle">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
@@ -1457,7 +1799,7 @@
                   <line x1="12" x2="12" y1="19" y2="22"/>
                 </svg>
               </div>
-              <span class="mock-mic-label" id="mockMicLabel">TAP TO BROADCAST</span>
+              <span class="mock-mic-label" id="mockMicLabel">TAP TO TALK</span>
             </div>
 
             <!-- Distance Guidance Helper -->
@@ -1467,24 +1809,24 @@
                 <line x1="12" y1="16" x2="12" y2="12"/>
                 <line x1="12" y1="8" x2="12.01" y2="8"/>
               </svg>
-              <span id="mockTipText">Keep 8–12 cm from mouth for crisp lectures without popping.</span>
+              <span id="mockTipText">Keep the phone 8–12 cm from your mouth for clear speech.</span>
             </div>
 
           </div>
         </div>
       </div>
 
-      <!-- Side Panel: The Live Web Audio DSP Lab -->
+      <!-- Side Panel: Live Sound Lab -->
       <div class="lab-panel">
         <div class="lab-header">
           <h2 class="lab-title" id="demo-heading">
-            <span>Live DSP Audio Lab</span>
+            <span>Try It Right Here</span>
           </h2>
-          <span class="lab-badge">WEB AUDIO API SYNTHESIZER</span>
+          <span class="lab-badge">INTERACTIVE DEMO</span>
         </div>
 
         <p class="lab-desc">
-          Audition the actual DSP algorithms built into PhoneMic directly in your browser. Listen to how our native lock-free DSP cleans voice, manages distance, and automatically ducks background music during speech.
+          Hear how PhoneMic works directly in your browser. Test how background music quiets down when you speak, try out voice filters, or see what distance works best.
         </p>
 
         <div class="lab-controls-grid">
@@ -1492,52 +1834,52 @@
           <!-- 1. Auto-Ducking Demo Card -->
           <div class="lab-card">
             <h4>
-              <span>Smart Vocal Auto-Ducking</span>
-              <span style="color:var(--brand-bright); font-size:0.75rem;">-14 dB Cut</span>
+              <span>Background Music Ducking</span>
+              <span style="color:var(--brand-bright); font-size:0.75rem;">Lowers 80%</span>
             </h4>
-            <p>Background music plays continuously. Tap <strong>Simulate Speech (PTT)</strong> to hear music smoothly dip and swell back up.</p>
+            <p>Start the music, then press and hold <strong>Hold to Speak</strong>. Notice how the music lowers smoothly so your voice cuts through, then returns when you finish.</p>
             <div style="display:flex; gap:8px;">
-              <button class="lab-btn" id="btnToggleBgm" aria-pressed="false">▶ Play BGM Track</button>
+              <button class="lab-btn" id="btnToggleBgm" aria-pressed="false">▶ Play Music</button>
               <button class="lab-btn" id="btnSimulateVoice" disabled>🎙️ Hold to Speak</button>
             </div>
             <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim);" id="duckingStatusText">
-              BGM: Inactive • Duck Gain: 1.00x (0 dB)
+              Music: Inactive
             </div>
           </div>
 
           <!-- 2. Voice Presets Audition -->
           <div class="lab-card">
             <h4>
-              <span>Tone Presets & DSP</span>
-              <span style="color:var(--accent-cyan); font-size:0.75rem;">Oboe Biquad</span>
+              <span>Voice Presets</span>
+              <span style="color:var(--accent-cyan); font-size:0.75rem;">Sound Filters</span>
             </h4>
-            <p>Switch EQ curve and reverb characteristics synthesized in real-time:</p>
+            <p>Click a preset to hear how it shapes your vocal tone in real-time:</p>
             <div style="display:flex; flex-wrap:wrap; gap:6px;">
               <button class="lab-btn active" data-preset="natural">Natural</button>
               <button class="lab-btn" data-preset="clear">Clear (+4.5dB)</button>
               <button class="lab-btn" data-preset="reverb">Singing Reverb</button>
-              <button class="lab-btn" data-preset="robot">Robot Mod</button>
+              <button class="lab-btn" data-preset="robot">Robot Fun</button>
             </div>
             <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim);" id="presetStatusText">
-              Filter: 80Hz HPF + Flat Response
+              Natural: Warm and balanced for conversation
             </div>
           </div>
 
-          <!-- 3. Real-Time Distance Guidance Simulator -->
+          <!-- 3. Distance Guidance Simulator -->
           <div class="lab-card" style="grid-column: 1 / -1;">
             <h4>
-              <span>Mouth-to-Microphone Distance Simulator</span>
-              <span id="sliderDistanceVal" style="color:var(--brand-bright); font-family:var(--font-mono);">10 cm (Optimal)</span>
+              <span>How close should you hold the phone?</span>
+              <span id="sliderDistanceVal" style="color:var(--brand-bright); font-family:var(--font-mono);">10 cm (Sweet Spot)</span>
             </h4>
-            <p>Drag the slider to observe how proximity affects acoustics, feedback likelihood, and plosive distortion:</p>
+            <p>Move the slider to see how mouth distance affects sound clarity and feedback risk:</p>
             <div class="lab-slider-row">
-              <span style="font-size:0.78rem; font-family:var(--font-mono); color:var(--text-dim);">2 cm (Close)</span>
-              <input type="range" min="2" max="30" value="10" class="lab-slider" id="distanceSlider" aria-label="Microphone Distance in centimeters">
-              <span style="font-size:0.78rem; font-family:var(--font-mono); color:var(--text-dim);">30 cm (Distant)</span>
+              <span style="font-size:0.78rem; font-family:var(--font-mono); color:var(--text-dim);">2 cm (Too close)</span>
+              <input type="range" min="2" max="30" value="10" class="lab-slider" id="distanceSlider" aria-label="Microphone distance in centimeters">
+              <span style="font-size:0.78rem; font-family:var(--font-mono); color:var(--text-dim);">30 cm (Far)</span>
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.76rem; color:var(--text-muted); padding-top:4px;" id="distanceAcousticFeedback">
-              <span>Proximity Effect: Normal</span>
-              <span style="color:var(--accent-emerald); font-weight:700;">Acoustic State: Safe & Balanced</span>
+            <div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--text-muted); padding-top:4px;" id="distanceAcousticFeedback">
+              <span>Sound clarity: Clean and balanced</span>
+              <span style="color:var(--accent-emerald); font-weight:700;">✓ Safe Acoustics • No feedback danger</span>
             </div>
           </div>
 
@@ -1546,83 +1888,83 @@
 
     </section>
 
-    <!-- White Hat Manifesto Section -->
+    <!-- Why We Built This / Our Promise Section -->
     <section id="manifesto" class="white-hat-manifesto" aria-labelledby="manifesto-heading">
       <div style="text-align:center; max-width:700px; margin:0 auto 10px;">
-        <span class="section-eyebrow">The White-Hat Standard</span>
-        <h2 class="section-title" id="manifesto-heading" style="margin-bottom:12px;">Engineering with High Integrity</h2>
+        <span class="section-eyebrow">Why we built this</span>
+        <h2 class="section-title" id="manifesto-heading" style="margin-bottom:12px;">No ads. No subscriptions. No nonsense.</h2>
         <p class="section-desc">
-          Commercial microphone apps on Google Play rely on deceptive subscriptions, full-screen video ads that interrupt your presentations, and cloud audio streaming. Here is our ethical contract with you.
+          Most microphone apps on the app store are filled with pop-up video ads, hidden weekly charges, and audio delay. We built PhoneMic to be the simple, honest tool we actually wanted to use.
         </p>
       </div>
 
       <div class="manifesto-grid">
-        <!-- Predatory Apps -->
+        <!-- Other Apps -->
         <div class="manifesto-card bad">
           <h3>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-            <span>What Predatory Mic Apps Do</span>
+            <span>What other mic apps do</span>
           </h3>
           <ul class="manifesto-list">
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-              <span><strong>Interstitial Video Ads:</strong> Pop up in the middle of live speeches, blasting loud third-party casino game ads through your PA speaker.</span>
+              <span><strong>Loud video ads mid-speech:</strong> Nothing is worse than an unexpected casino game ad blasting through your speakers while you're talking.</span>
             </li>
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-              <span><strong>Hidden Subscription Traps:</strong> \$9.99/week recurring paywalls disguised behind ambiguous "Continue" buttons.</span>
+              <span><strong>Sneaky weekly charges:</strong> Sneaky \$10/week recurring charges hidden behind tricky "Continue" buttons.</span>
             </li>
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-              <span><strong>Unsafe Audio Pipelines:</strong> Zero feedback limiting. If the phone gets near the speaker, howling feedback blows your tweeter cones.</span>
+              <span><strong>Dangerous squealing feedback:</strong> No volume protection, meaning sudden high-pitched shrieks can hurt ears and damage speakers.</span>
             </li>
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-              <span><strong>Cloud Eavesdropping:</strong> Invasive analytics SDKs and remote tracking daemons constantly profiling your audio environment.</span>
+              <span><strong>Sending audio to the cloud:</strong> Closed-source code and background trackers listening to your room.</span>
             </li>
           </ul>
         </div>
 
-        <!-- PhoneMic White-Hat -->
+        <!-- PhoneMic Guarantee -->
         <div class="manifesto-card good">
           <h3>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-            <span>The PhoneMic White-Hat Guarantee</span>
+            <span>The PhoneMic promise</span>
           </h3>
           <ul class="manifesto-list">
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              <span><strong>Zero Ads, Zero Trackers Forever:</strong> No banner ads, no video popups, no telemetry SDKs. Clean, distraction-free speech.</span>
+              <span><strong>100% ad-free, forever:</strong> No banners, no popups, no trackers. Your live speech will never be interrupted.</span>
             </li>
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              <span><strong>100% Free Public Beta:</strong> Download the full featured APK without payment gates, feature locks, or account sign-ups.</span>
+              <span><strong>Completely free beta:</strong> Download and use every feature right now. No paywalls, no trial timers, no account required.</span>
             </li>
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              <span><strong>Acoustic Safety by Law:</strong> Permanent -0.5 dBFS brickwall peak limiter compiled directly in C++ prevents sudden feedback pops.</span>
+              <span><strong>Built-in ear safety:</strong> A permanent limiter stops feedback squeals and loud clatter before they hit your speakers.</span>
             </li>
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-              <span><strong>100% On-Device & Open Source:</strong> Audio never touches an external server. The code is public on GitHub under Apache 2.0 / MIT.</span>
+              <span><strong>Your voice stays on your phone:</strong> Audio never touches the internet or an external server. 100% open-source.</span>
             </li>
           </ul>
         </div>
       </div>
     </section>
 
-    <!-- Objective Competitive Analysis -->
+    <!-- Side-by-Side Comparison -->
     <section id="comparison" aria-labelledby="comparison-heading">
       <div class="section-header">
-        <div class="section-eyebrow">Honest Benchmarking</div>
-        <h2 class="section-title" id="comparison-heading">Competitive Matrix</h2>
+        <div class="section-eyebrow">Side-by-side comparison</div>
+        <h2 class="section-title" id="comparison-heading">How PhoneMic stacks up</h2>
         <p class="section-desc">
-          How PhoneMic compares to generic Play Store mic apps and dedicated \$300+ hardware wireless microphones (Røde Wireless GO II, DJI Mic 2).
+          See how PhoneMic compares to typical app store apps and expensive \$300 dedicated hardware wireless microphones.
         </p>
       </div>
 
       <div class="table-container">
-        <table class="comparison-table" aria-label="Competitive Comparison Table">
+        <table class="comparison-table" aria-label="Competitive comparison table">
           <thead>
             <tr>
               <th scope="col" style="width:28%;">Capability / Feature</th>
@@ -1633,79 +1975,79 @@
           </thead>
           <tbody>
             <tr>
-              <td><strong>Cost to Use</strong></td>
-              <td class="col-highlight"><span class="check-yes">✓ Free (Public Beta)</span></td>
-              <td><span class="check-no">✕ \$4.99–\$9.99/mo Subscriptions</span></td>
-              <td><span class="check-no">✕ \$250 – \$350 Hardware Purchase</span></td>
+              <td><strong>Price</strong></td>
+              <td class="col-highlight"><span class="check-yes">✓ 100% Free Public Beta</span></td>
+              <td><span class="check-no">✕ \$5 – \$10/mo Subscriptions</span></td>
+              <td><span class="check-no">✕ \$250 – \$350 Purchase</span></td>
             </tr>
             <tr>
-              <td><strong>Audio Processing Engine</strong></td>
-              <td class="col-highlight"><span class="check-yes">✓ Google Oboe C++ Native</span></td>
-              <td><span class="check-no">✕ Java AudioRecord (GC Stutter)</span></td>
-              <td><span class="check-yes">✓ Dedicated DSP Hardware</span></td>
+              <td><strong>Audio Delay & Stutter</strong></td>
+              <td class="col-highlight"><span class="check-yes">✓ Zero Lag (C++ Engine)</span></td>
+              <td><span class="check-no">✕ Noticeable Delay & Stutter</span></td>
+              <td><span class="check-yes">✓ Dedicated Wireless Radio</span></td>
             </tr>
             <tr>
-              <td><strong>Acoustic Safety Limiter</strong></td>
-              <td class="col-highlight"><span class="check-yes">✓ Permanent -0.5 dBFS Brickwall</span></td>
-              <td><span class="check-no">✕ None (Risk of blown tweeters)</span></td>
-              <td><span class="check-partial">⚠ Present on high-end models</span></td>
+              <td><strong>Ear & Speaker Limiter</strong></td>
+              <td class="col-highlight"><span class="check-yes">✓ Built-in Peak Limiter</span></td>
+              <td><span class="check-no">✕ None (Risk of Blown Speakers)</span></td>
+              <td><span class="check-partial">⚠ High-end Models Only</span></td>
             </tr>
             <tr>
-              <td><strong>Smart Vocal Auto-Ducking</strong></td>
-              <td class="col-highlight"><span class="check-yes">✓ Automatic -14dB BGM Ducking</span></td>
-              <td><span class="check-no">✕ None (Speech clashes with music)</span></td>
-              <td><span class="check-partial">⚠ Requires external mixer</span></td>
+              <td><strong>Music Auto-Ducking</strong></td>
+              <td class="col-highlight"><span class="check-yes">✓ Lowers Music When You Speak</span></td>
+              <td><span class="check-no">✕ None (Music Drowns Voice)</span></td>
+              <td><span class="check-partial">⚠ Requires External Audio Mixer</span></td>
             </tr>
             <tr>
-              <td><strong>Singing Reverb & Delay</strong></td>
-              <td class="col-highlight"><span class="check-yes">✓ Concert Plate Reverb + Slapback</span></td>
-              <td><span class="check-no">✕ None (Dry speech only)</span></td>
-              <td><span class="check-no">✕ None (Dry capsule output)</span></td>
+              <td><strong>Singing Reverb & Echo</strong></td>
+              <td class="col-highlight"><span class="check-yes">✓ Built-in Reverb & Echo</span></td>
+              <td><span class="check-no">✕ Flat Speech Only</span></td>
+              <td><span class="check-no">✕ Flat Speech Only</span></td>
             </tr>
             <tr>
-              <td><strong>Hardware Volume Key PTT</strong></td>
-              <td class="col-highlight"><span class="check-yes">✓ Physical Vol Up/Down Walkie-Talkie</span></td>
-              <td><span class="check-no">✕ Touchscreen button only</span></td>
-              <td><span class="check-yes">✓ Transmitter Mute Switch</span></td>
+              <td><strong>Physical Walkie-Talkie Button</strong></td>
+              <td class="col-highlight"><span class="check-yes">✓ Hold Volume Up/Down Keys</span></td>
+              <td><span class="check-no">✕ Screen Taps Only</span></td>
+              <td><span class="check-yes">✓ Physical Switch on Mic</span></td>
             </tr>
             <tr>
-              <td><strong>Multi-Phone Wi-Fi Relay</strong></td>
-              <td class="col-highlight"><span class="check-yes">✓ Built-in UDP Station Streaming</span></td>
-              <td><span class="check-no">✕ None</span></td>
-              <td><span class="check-no">✕ Proprietary 2.4GHz Receiver Only</span></td>
+              <td><strong>Two-Phone Wireless Relay</strong></td>
+              <td class="col-highlight"><span class="check-yes">✓ Stream Over Local Wi-Fi</span></td>
+              <td><span class="check-no">✕ Not Supported</span></td>
+              <td><span class="check-no">✕ Proprietary Hardware Only</span></td>
             </tr>
             <tr>
-              <td><strong>Open Source & Privacy</strong></td>
-              <td class="col-highlight"><span class="check-yes">✓ 100% Open Source (Apache 2.0)</span></td>
-              <td><span class="check-no">✕ Proprietary + Ad Trackers</span></td>
-              <td><span class="check-partial">⚠ Proprietary Firmware</span></td>
+              <td><strong>Privacy & Code</strong></td>
+              <td class="col-highlight"><span class="check-yes">✓ Open Source • Zero Ads</span></td>
+              <td><span class="check-no">✕ Ad Trackers & Data Profiling</span></td>
+              <td><span class="check-partial">⚠ Proprietary Hardware</span></td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- Core Scenarios Bento Grid -->
+    <!-- Everyday Scenarios Grid -->
     <section id="scenarios" aria-labelledby="scenarios-heading">
       <div class="section-header">
-        <div class="section-eyebrow">Real-World Utility</div>
-        <h2 class="section-title" id="scenarios-heading">Tailored for Where Sound Matters Most</h2>
+        <div class="section-eyebrow">Everyday uses</div>
+        <h2 class="section-title" id="scenarios-heading">Made for real situations</h2>
         <p class="section-desc">
-          One tap reconfigures equalizers, compressor ratios, safety thresholds, and auto-ducking DSP for your specific environment.
+          Pick your situation with one tap. PhoneMic adjusts filters, volume boost, and music ducking automatically.
         </p>
       </div>
 
       <div class="scenarios-grid">
         <article class="scenario-card">
           <div>
-            <div class="scenario-badge">EDUCATION & LECTURES</div>
-            <h3>🎓 Classroom & Hall</h3>
+            <div class="scenario-badge">EDUCATION</div>
+            <h3>🎓 Classroom & Lectures</h3>
             <p>
-              Enhanced 3 kHz presence filter ensures speech intelligibility across large 100+ student lecture halls without requiring teachers to strain their vocal cords.
+              Boosts speech presence so your students in the back row hear every word clearly, without you having to strain your voice all day.
             </p>
           </div>
           <div class="scenario-specs-pill">
-            <span>Clear Speech EQ • +3 dB • Auto-Ducking On</span>
+            <span>Clear Voice • Volume Boost • Auto-Ducking On</span>
           </div>
         </article>
 
@@ -1714,75 +2056,75 @@
             <div class="scenario-badge">FITNESS & COACHING</div>
             <h3>⚡ Fitness & Gym</h3>
             <p>
-              Aggressive speech compression and vocal priority auto-ducking cuts commanding instructor cues over pumping, high-energy gym workout tracks.
+              Play high-energy workout music. Whenever you call out reps or give instructions, the music drops down automatically so you don't shout over the beat.
             </p>
           </div>
           <div class="scenario-specs-pill">
-            <span>Loud Speech • +6 dB • Auto-Ducking -14dB</span>
+            <span>Loud Voice • Ducks Music 80%</span>
           </div>
         </article>
 
         <article class="scenario-card">
           <div>
-            <div class="scenario-badge">TOURISM & SIGHTSEEING</div>
-            <h3>🏛️ Tour Guide</h3>
+            <div class="scenario-badge">TOURISM</div>
+            <h3>🏛️ Tour Guides</h3>
             <p>
-              Steep 140 Hz high-pass wind rejection and ambient noise cutoff designed for walking groups through crowded heritage streets and open-air monuments.
+              Cuts wind rumble and outdoor street noise so your tour group hears your stories clearly as you walk through crowded streets and monuments.
             </p>
           </div>
           <div class="scenario-specs-pill">
-            <span>Outdoor EQ • +4 dB • Wind Rejection 140Hz</span>
+            <span>Wind Filter • Outdoor Clarity</span>
           </div>
         </article>
 
         <article class="scenario-card">
           <div>
-            <div class="scenario-badge">SINGING & BUSKING</div>
-            <h3>🎤 Busker & Karaoke</h3>
+            <div class="scenario-badge">MUSIC & BUSKING</div>
+            <h3>🎤 Singing & Karaoke</h3>
             <p>
-              Full-bandwidth low-end, studio plate reverb, and synced slapback vocal echo paired with continuous acoustic guitar and lo-fi chord loops.
+              Adds warm concert reverb and vocal echo, with continuous background music loops to sing along with on the street or in the living room.
             </p>
           </div>
           <div class="scenario-specs-pill">
-            <span>Concert Reverb • 0 dB • BGM Synth Backing</span>
+            <span>Concert Reverb • Background Loops</span>
           </div>
         </article>
 
         <article class="scenario-card">
           <div>
-            <div class="scenario-badge">LOGISTICS & INDUSTRY</div>
-            <h3>🏭 Warehouse Dispatch</h3>
+            <div class="scenario-badge">DISPATCH & LOGISTICS</div>
+            <h3>🏭 Warehouse & Dispatch</h3>
             <p>
-              Heavy brickwall compression with hardware volume-key Push-To-Talk. Dispatch truck loading or yard announcements over industrial ambient machinery.
+              Hold down your phone's physical volume button like a walkie-talkie to make quick announcements over loud machinery.
             </p>
           </div>
           <div class="scenario-specs-pill">
-            <span>Loud Speech • +8 dB • Hardware Vol PTT</span>
+            <span>Push-to-Talk • Hardware Volume Button</span>
           </div>
         </article>
 
         <article class="scenario-card">
           <div>
-            <div class="scenario-badge">CIVIC & EMERGENCIES</div>
-            <h3>🚨 Crisis Megaphone</h3>
+            <div class="scenario-badge">SPORTS & EVENTS</div>
+            <h3>🚨 Sports Days & Meets</h3>
             <p>
-              Instantly converts any organizer's phone into a high-powered digital public address system during marathons, rallies, or emergency evacuations.
+              Turn your phone into an instant digital megaphone to gather teams, announce start times, and coordinate crowd movements.
             </p>
           </div>
           <div class="scenario-specs-pill">
-            <span>Peak Limiter • Wi-Fi Station Relay</span>
+            <span>Instant PA • Wi-Fi Phone Relay</span>
           </div>
         </article>
       </div>
     </section>
 
-    <!-- Engineering & Architecture Bento -->
+    <!-- Engineering & Architecture -->
     <section id="specs" aria-labelledby="tech-heading">
       <div class="section-header">
-        <div class="section-eyebrow">Native Architecture</div>
-        <h2 class="section-title" id="tech-heading">Zero-GC Native C++ Audio Pipeline</h2>
+        <div class="section-eyebrow">Under the hood</div>
+        <h2 class="section-title" id="tech-heading">Built for speed and zero lag</h2>
         <p class="section-desc">
-          Standard Android audio frameworks trigger frequent garbage collection pauses that ruin live speech. PhoneMic operates entirely in native memory.
+          Standard Android apps stutter because the system periodically pauses to clean memory. PhoneMic runs low-level C++ code directly on your phone's audio chip for instant sound.
         </p>
       </div>
 
@@ -1794,8 +2136,8 @@
             </svg>
           </div>
           <div class="tech-content">
-            <h3>Google Oboe / AAudio C++ Engine</h3>
-            <p>Direct interface to Android Audio HAL with lock-free single-producer single-consumer (SPSC) ring buffers. Eliminates runtime garbage collection jitter.</p>
+            <h3>Google Oboe Real-Time Engine</h3>
+            <p>Communicates directly with your phone's sound hardware to stream voice with virtually no delay, avoiding Java pauses.</p>
           </div>
         </div>
 
@@ -1807,8 +2149,8 @@
             </svg>
           </div>
           <div class="tech-content">
-            <h3>Permanent -0.5 dBFS Brickwall Limiter</h3>
-            <p>Guarantees that combined voice, soundboard cues, and continuous background music can never exceed -0.5 dBFS. Protects audience ears and expensive PA drivers.</p>
+            <h3>Ear & Speaker Limiter</h3>
+            <p>Capped at -0.5 dBFS so loud coughs, dropped phones, or close-range feedback never damage your speakers or ears.</p>
           </div>
         </div>
 
@@ -1822,8 +2164,8 @@
             </svg>
           </div>
           <div class="tech-content">
-            <h3>Two-Phone Wi-Fi Wireless Relay</h3>
-            <p>Overcomes 10-meter Bluetooth range limitations. Phone 1 acts as a wireless presenter mic streaming raw PCM over local Wi-Fi UDP to Phone 2 connected to the stage PA.</p>
+            <h3>Two-Phone Wi-Fi Relay</h3>
+            <p>Need more range than Bluetooth's 10 meters? Keep one phone plugged into the speaker across the hall, and talk into your personal phone over Wi-Fi.</p>
           </div>
         </div>
 
@@ -1836,50 +2178,50 @@
             </svg>
           </div>
           <div class="tech-content">
-            <h3>Adaptive Feedback Notch Filter</h3>
-            <p>Automated zero-crossing analysis monitors sustained pure-tone howling resonances and automatically engages narrow notch filtering within 30 milliseconds.</p>
+            <h3>Feedback Protection</h3>
+            <p>Monitors for high-frequency squealing loops and automatically engages notch filtering within 30 milliseconds.</p>
           </div>
         </div>
       </div>
 
       <!-- Specifications Table -->
       <div class="specs-card">
-        <h3 style="font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; margin-bottom: 16px; color: var(--text-main);">
-          Technical Build & Deployment Specifications
+        <h3 style="font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; margin-bottom: 16px; color: var(--text-main);">
+          Technical Build Specifications
         </h3>
         <table class="specs-table">
           <tbody>
             <tr>
-              <td>Target Operating System</td>
-              <td>Android 8.0 (Oreo, API 26) through Android 14+ (API 34)</td>
+              <td>Compatible Android Versions</td>
+              <td>Android 8.0 (Oreo) through Android 14+</td>
             </tr>
             <tr>
-              <td>Hardware Architectures</td>
-              <td>ARM64-v8a, ARM32-v7a, x86_64</td>
+              <td>Supported Phone Processors</td>
+              <td>ARM64, ARM32, x86_64</td>
             </tr>
             <tr>
-              <td>Native Audio Framework</td>
-              <td>Google Oboe 1.8+ / AAudio C++ (with AudioRecord Java fallback)</td>
+              <td>Audio Engine</td>
+              <td>Google Oboe C++ with AAudio (with Java AudioRecord fallback)</td>
             </tr>
             <tr>
-              <td>Sampling Rate & Format</td>
-              <td>48,000 Hz • 16-bit Mono PCM (Zero Latency Resampling)</td>
+              <td>Sound Quality</td>
+              <td>48,000 Hz • 16-bit Mono PCM (Zero Latency)</td>
             </tr>
             <tr>
-              <td>Network Protocol</td>
-              <td>Local Wi-Fi UDP Streaming (Port 50005) + mDNS / NSD Auto-Discovery</td>
+              <td>Wi-Fi Relay Protocol</td>
+              <td>Local Wi-Fi UDP Streaming + Auto-Discovery</td>
             </tr>
             <tr>
               <td>Accessibility Standard</td>
-              <td>WCAG 2.1 Level AAA (7:1+ Contrast, Keyboard Accessible, Screen Reader Ready)</td>
+              <td>WCAG 2.1 Level AAA (7:1+ Contrast, Screen Reader Friendly, Keyboard Controls)</td>
             </tr>
             <tr>
-              <td>CI Verification</td>
-              <td><span style="color:var(--accent-emerald); font-weight:700;">GitHub Actions Passed • 18 Unit Tests Clean • Lint Clean</span></td>
+              <td>Automated Tests</td>
+              <td><span style="color:var(--accent-emerald); font-weight:700;">All 18 Unit Tests Passed • Clean Build</span></td>
             </tr>
             <tr>
-              <td>Source Repository</td>
-              <td><a href="https://github.com/prabhakarmdes12-cmyk/phone-mic" target="_blank" rel="noopener">prabhakarmdes12-cmyk/phone-mic</a></td>
+              <td>Source Code</td>
+              <td><a href="https://github.com/prabhakarmdes12-cmyk/phone-mic" target="_blank" rel="noopener">github.com/prabhakarmdes12-cmyk/phone-mic</a></td>
             </tr>
           </tbody>
         </table>
@@ -1889,9 +2231,9 @@
     <!-- 3-Step Installation -->
     <section class="install-section" aria-labelledby="install-heading">
       <div class="section-header">
-        <div class="section-eyebrow">Zero Friction</div>
-        <h2 class="section-title" id="install-heading">Install in 60 Seconds</h2>
-        <p class="section-desc">No Google Play account or registration required. Install the native APK directly.</p>
+        <div class="section-eyebrow">Quick install</div>
+        <h2 class="section-title" id="install-heading">Get started in 3 steps</h2>
+        <p class="section-desc">No accounts or signups needed. Just download and open.</p>
       </div>
 
       <div class="steps-grid">
@@ -1909,8 +2251,8 @@
 
         <div class="step-card">
           <div class="step-number" aria-hidden="true">3</div>
-          <h3>Pair & Speak</h3>
-          <p>Tap <strong>Install</strong>. Open PhoneMic, pair your Bluetooth speaker or aux cable, grant microphone permission, and speak!</p>
+          <h3>Connect & Speak</h3>
+          <p>Tap <strong>Install</strong>. Open PhoneMic, pair your Bluetooth speaker or plug in an aux cable, and speak!</p>
         </div>
       </div>
     </section>
@@ -1920,25 +2262,228 @@
   <!-- Footer -->
   <footer role="contentinfo">
     <p>
-      PhoneMic © 2026 • Crafted with the <a href="https://github.com/chititech-web/Chiti_Technologies_Design_System" target="_blank" rel="noopener">Chiti Technologies Unified Design System v3</a>.
+      PhoneMic © 2026 • Free and open-source under Apache 2.0 / MIT.
     </p>
-    <p style="margin-top: 8px; font-size: 0.82rem; color: var(--text-muted);">
-      Open-source utility licensed under Apache 2.0 / MIT. Zero telemetry, zero external servers, zero audio eavesdropping.
+    <p style="margin-top: 8px; font-size: 0.84rem; color: var(--text-muted);">
+      Zero telemetry, zero external servers, zero eavesdropping. Your sound never leaves your phone.
     </p>
   </footer>
 
   <!-- ============================================================
-       Interactive Scripts: Fluid Canvas, 3D Tilt, & Web Audio DSP Lab
+       Interactive Scripts: Accessibility, Fluid Canvas, 3D Tilt, & Web Audio
        ============================================================ -->
   <script>
+    // ─────────────────────────────────────────────────────────────
+    // 0. Accessible Controller & User Preferences (WCAG AAA)
+    // ─────────────────────────────────────────────────────────────
+    const a11yToggleBtn = document.getElementById('a11yToggleBtn');
+    const a11yModal = document.getElementById('a11yModal');
+    const a11yCloseBtn = document.getElementById('a11yCloseBtn');
+    const a11yBackdrop = document.getElementById('a11yBackdrop');
+
+    const btnMotionOn = document.getElementById('btnMotionOn');
+    const btnMotionOff = document.getElementById('btnMotionOff');
+    const btnContrastDefault = document.getElementById('btnContrastDefault');
+    const btnContrastHigh = document.getElementById('btnContrastHigh');
+    const btnFontNormal = document.getElementById('btnFontNormal');
+    const btnFontLarge = document.getElementById('btnFontLarge');
+    const btnFontXLarge = document.getElementById('btnFontXLarge');
+    const btnFocusNormal = document.getElementById('btnFocusNormal');
+    const btnFocusEnhanced = document.getElementById('btnFocusEnhanced');
+    const btnA11yReset = document.getElementById('btnA11yReset');
+
+    let isMotionEnabled = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let isHighContrast = false;
+    let fontSizeMode = 'normal';
+    let isFocusEnhanced = false;
+
+    // Load saved preferences
+    try {
+      const savedMotion = localStorage.getItem('pm_motion');
+      if (savedMotion !== null) isMotionEnabled = savedMotion === 'true';
+
+      const savedContrast = localStorage.getItem('pm_contrast');
+      if (savedContrast === 'high') isHighContrast = true;
+
+      const savedFont = localStorage.getItem('pm_font');
+      if (savedFont) fontSizeMode = savedFont;
+
+      const savedFocus = localStorage.getItem('pm_focus');
+      if (savedFocus === 'enhanced') isFocusEnhanced = true;
+    } catch (e) {}
+
+    function applyA11ySettings() {
+      // Motion
+      if (!isMotionEnabled) {
+        document.documentElement.classList.add('reduced-motion');
+        btnMotionOn.classList.remove('active');
+        btnMotionOn.setAttribute('aria-checked', 'false');
+        btnMotionOff.classList.add('active');
+        btnMotionOff.setAttribute('aria-checked', 'true');
+      } else {
+        document.documentElement.classList.remove('reduced-motion');
+        btnMotionOn.classList.add('active');
+        btnMotionOn.setAttribute('aria-checked', 'true');
+        btnMotionOff.classList.remove('active');
+        btnMotionOff.setAttribute('aria-checked', 'false');
+      }
+
+      // Contrast
+      if (isHighContrast) {
+        document.documentElement.classList.add('high-contrast');
+        btnContrastDefault.classList.remove('active');
+        btnContrastDefault.setAttribute('aria-checked', 'false');
+        btnContrastHigh.classList.add('active');
+        btnContrastHigh.setAttribute('aria-checked', 'true');
+      } else {
+        document.documentElement.classList.remove('high-contrast');
+        btnContrastDefault.classList.add('active');
+        btnContrastDefault.setAttribute('aria-checked', 'true');
+        btnContrastHigh.classList.remove('active');
+        btnContrastHigh.setAttribute('aria-checked', 'false');
+      }
+
+      // Font size
+      document.documentElement.classList.remove('font-large', 'font-xlarge');
+      btnFontNormal.classList.remove('active');
+      btnFontLarge.classList.remove('active');
+      btnFontXLarge.classList.remove('active');
+      btnFontNormal.setAttribute('aria-checked', 'false');
+      btnFontLarge.setAttribute('aria-checked', 'false');
+      btnFontXLarge.setAttribute('aria-checked', 'false');
+
+      if (fontSizeMode === 'large') {
+        document.documentElement.classList.add('font-large');
+        btnFontLarge.classList.add('active');
+        btnFontLarge.setAttribute('aria-checked', 'true');
+      } else if (fontSizeMode === 'xlarge') {
+        document.documentElement.classList.add('font-xlarge');
+        btnFontXLarge.classList.add('active');
+        btnFontXLarge.setAttribute('aria-checked', 'true');
+      } else {
+        btnFontNormal.classList.add('active');
+        btnFontNormal.setAttribute('aria-checked', 'true');
+      }
+
+      // Focus Outline
+      if (isFocusEnhanced) {
+        document.documentElement.classList.add('focus-enhanced');
+        btnFocusNormal.classList.remove('active');
+        btnFocusNormal.setAttribute('aria-checked', 'false');
+        btnFocusEnhanced.classList.add('active');
+        btnFocusEnhanced.setAttribute('aria-checked', 'true');
+      } else {
+        document.documentElement.classList.remove('focus-enhanced');
+        btnFocusNormal.classList.add('active');
+        btnFocusNormal.setAttribute('aria-checked', 'true');
+        btnFocusEnhanced.classList.remove('active');
+        btnFocusEnhanced.setAttribute('aria-checked', 'false');
+      }
+    }
+
+    applyA11ySettings();
+
+    function openA11yModal() {
+      a11yModal.style.display = 'block';
+      a11yToggleBtn.setAttribute('aria-expanded', 'true');
+      a11yCloseBtn.focus();
+    }
+
+    function closeA11yModal() {
+      a11yModal.style.display = 'none';
+      a11yToggleBtn.setAttribute('aria-expanded', 'false');
+      a11yToggleBtn.focus();
+    }
+
+    a11yToggleBtn.addEventListener('click', openA11yModal);
+    a11yCloseBtn.addEventListener('click', closeA11yModal);
+    a11yBackdrop.addEventListener('click', closeA11yModal);
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && a11yModal.style.display === 'block') {
+        closeA11yModal();
+      }
+    });
+
+    // Control Handlers
+    btnMotionOn.addEventListener('click', () => {
+      isMotionEnabled = true;
+      try { localStorage.setItem('pm_motion', 'true'); } catch (e) {}
+      applyA11ySettings();
+      if (!animationFrameId) drawHeroWave();
+    });
+
+    btnMotionOff.addEventListener('click', () => {
+      isMotionEnabled = false;
+      try { localStorage.setItem('pm_motion', 'false'); } catch (e) {}
+      applyA11ySettings();
+    });
+
+    btnContrastDefault.addEventListener('click', () => {
+      isHighContrast = false;
+      try { localStorage.setItem('pm_contrast', 'normal'); } catch (e) {}
+      applyA11ySettings();
+    });
+
+    btnContrastHigh.addEventListener('click', () => {
+      isHighContrast = true;
+      try { localStorage.setItem('pm_contrast', 'high'); } catch (e) {}
+      applyA11ySettings();
+    });
+
+    btnFontNormal.addEventListener('click', () => {
+      fontSizeMode = 'normal';
+      try { localStorage.setItem('pm_font', 'normal'); } catch (e) {}
+      applyA11ySettings();
+    });
+
+    btnFontLarge.addEventListener('click', () => {
+      fontSizeMode = 'large';
+      try { localStorage.setItem('pm_font', 'large'); } catch (e) {}
+      applyA11ySettings();
+    });
+
+    btnFontXLarge.addEventListener('click', () => {
+      fontSizeMode = 'xlarge';
+      try { localStorage.setItem('pm_font', 'xlarge'); } catch (e) {}
+      applyA11ySettings();
+    });
+
+    btnFocusNormal.addEventListener('click', () => {
+      isFocusEnhanced = false;
+      try { localStorage.setItem('pm_focus', 'normal'); } catch (e) {}
+      applyA11ySettings();
+    });
+
+    btnFocusEnhanced.addEventListener('click', () => {
+      isFocusEnhanced = true;
+      try { localStorage.setItem('pm_focus', 'enhanced'); } catch (e) {}
+      applyA11ySettings();
+    });
+
+    btnA11yReset.addEventListener('click', () => {
+      isMotionEnabled = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      isHighContrast = false;
+      fontSizeMode = 'normal';
+      isFocusEnhanced = false;
+      try {
+        localStorage.removeItem('pm_motion');
+        localStorage.removeItem('pm_contrast');
+        localStorage.removeItem('pm_font');
+        localStorage.removeItem('pm_focus');
+      } catch (e) {}
+      applyA11ySettings();
+    });
+
     // ─────────────────────────────────────────────────────────────
     // 1. Fluid Audio Spectrum Canvas Background
     // ─────────────────────────────────────────────────────────────
     const canvas = document.getElementById('heroCanvas');
     const ctx = canvas.getContext('2d');
     let width, height;
-    let mouse = { x: -1000, y: -1000, vx: 0, vy: 0 };
+    let mouse = { x: -1000, y: -1000 };
     let time = 0;
+    let animationFrameId = null;
 
     function resizeCanvas() {
       width = canvas.width = window.innerWidth;
@@ -1953,6 +2498,10 @@
     });
 
     function drawHeroWave() {
+      if (!isMotionEnabled) {
+        animationFrameId = null;
+        return;
+      }
       ctx.clearRect(0, 0, width, height);
       time += 0.015;
 
@@ -1979,10 +2528,10 @@
         ctx.fill();
       });
 
-      requestAnimationFrame(drawHeroWave);
+      animationFrameId = requestAnimationFrame(drawHeroWave);
     }
-    // Only animate if user does not prefer reduced motion
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+
+    if (isMotionEnabled) {
       drawHeroWave();
     }
 
@@ -1990,8 +2539,9 @@
     // 2. 3D Mouse Follow Tilt Physics for Phone Mockup
     // ─────────────────────────────────────────────────────────────
     const phone = document.getElementById('interactivePhone');
-    if (phone && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (phone) {
       document.addEventListener('mousemove', (e) => {
+        if (!isMotionEnabled) return;
         const rect = phone.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
@@ -2027,19 +2577,19 @@
       isBroadcasting = !isBroadcasting;
       if (isBroadcasting) {
         mockMicCircle.classList.add('live');
-        mockMicLabel.textContent = 'MIC ON • TAP TO STOP';
+        mockMicLabel.textContent = 'MIC ON • TAP TO MUTE';
         mockMicLabel.style.color = '#C4B5FD';
-        mockStatusText.textContent = 'LIVE BROADCAST';
+        mockStatusText.textContent = 'LIVE';
         mockStatusPill.style.background = 'rgba(167, 139, 250, 0.2)';
         mockStatusPill.style.color = 'var(--brand-bright)';
       } else {
         mockMicCircle.classList.remove('live');
-        mockMicLabel.textContent = 'TAP TO BROADCAST';
+        mockMicLabel.textContent = 'TAP TO TALK';
         mockMicLabel.style.color = 'var(--text-muted)';
         mockStatusText.textContent = 'READY';
         mockStatusPill.style.background = 'rgba(52, 211, 153, 0.15)';
         mockStatusPill.style.color = 'var(--accent-emerald)';
-        mockDbText.textContent = '-96 dBFS';
+        mockDbText.textContent = '-96 dB';
         phoneBars.forEach(b => { b.style.height = '10%'; b.className = 'mock-vu-bar'; });
       }
     }
@@ -2053,7 +2603,7 @@
       const energy = Math.random();
       const activeBars = Math.floor(energy * (vuBarCount - 4)) + 4;
       const dbVal = Math.round(-32 + energy * 26);
-      mockDbText.textContent = `${dbVal} dBFS`;
+      mockDbText.textContent = `${dbVal} dB`;
 
       phoneBars.forEach((bar, idx) => {
         if (idx < activeBars) {
@@ -2070,28 +2620,28 @@
     }, 110);
 
     // ─────────────────────────────────────────────────────────────
-    // 4. Phone Scenario Chips Interaction
+    // 4. Phone Scenario Chips
     // ─────────────────────────────────────────────────────────────
     const scenarioData = {
       classroom: {
-        tip: 'Hold 8–12 cm from mouth for crisp lectures without popping.',
-        preset: 'Clear Speech (+3 dB)'
+        tip: 'Keep the phone 8–12 cm from your mouth for clear speech.',
+        preset: 'Clear Voice (+3 dB)'
       },
       fitness: {
-        tip: 'Chest-level or collar mount (12–18 cm) against loud gym music.',
-        preset: 'Loud Speech (+6 dB)'
+        tip: 'Clip 12–18 cm at chest or collar level to project over loud workout music.',
+        preset: 'Loud Voice (+6 dB)'
       },
       tour: {
-        tip: 'Handheld 5–10 cm, point microphone away from direct wind.',
-        preset: 'Outdoor EQ (+4 dB)'
+        tip: 'Hold 5–10 cm and point away from wind so your group hears every word.',
+        preset: 'Wind Filter (+4 dB)'
       },
       karaoke: {
-        tip: 'Sing 3–5 cm from microphone with consistent breath control.',
+        tip: 'Hold 3–5 cm close for full vocal warmth and reverb.',
         preset: 'Singing Reverb (0 dB)'
       },
       warehouse: {
-        tip: 'Hold close (2–5 cm) and speak firmly over industrial noise.',
-        preset: 'Push-To-Talk Dispatch (+8 dB)'
+        tip: 'Hold phone close (2–5 cm) and hold volume keys to speak over machinery.',
+        preset: 'Push-to-Talk (+8 dB)'
       }
     };
 
@@ -2116,13 +2666,12 @@
     });
 
     // ─────────────────────────────────────────────────────────────
-    // 5. Live Web Audio API Synthesizer & Auto-Ducking Lab
+    // 5. Live Sound Demo & Auto-Ducking
     // ─────────────────────────────────────────────────────────────
     let audioCtx = null;
     let bgmGainNode = null;
-    let bgmOsc1 = null, bgmOsc2 = null, bgmInterval = null;
+    let bgmInterval = null;
     let isBgmPlaying = false;
-    let currentDuckGain = 1.0;
 
     function initAudioContext() {
       if (!audioCtx) {
@@ -2141,18 +2690,18 @@
       initAudioContext();
       if (!isBgmPlaying) {
         startBgmSynth();
-        btnToggleBgm.textContent = '⏹ Stop BGM Track';
+        btnToggleBgm.textContent = '⏹ Stop Music';
         btnToggleBgm.classList.add('active');
         btnToggleBgm.setAttribute('aria-pressed', 'true');
         btnSimulateVoice.disabled = false;
-        duckingStatusText.textContent = 'BGM: Playing Lo-Fi Chords • Duck Gain: 1.00x (0 dB)';
+        duckingStatusText.textContent = 'Music: Playing • Lowers to 20% while you speak';
       } else {
         stopBgmSynth();
-        btnToggleBgm.textContent = '▶ Play BGM Track';
+        btnToggleBgm.textContent = '▶ Play Music';
         btnToggleBgm.classList.remove('active');
         btnToggleBgm.setAttribute('aria-pressed', 'false');
         btnSimulateVoice.disabled = true;
-        duckingStatusText.textContent = 'BGM: Inactive • Duck Gain: 1.00x (0 dB)';
+        duckingStatusText.textContent = 'Music: Inactive';
       }
     });
 
@@ -2162,7 +2711,6 @@
       bgmGainNode.gain.setValueAtTime(0.25, audioCtx.currentTime);
       bgmGainNode.connect(audioCtx.destination);
 
-      // Simple 4-chord progression: Am -> F -> C -> G
       const chords = [
         [220, 261.63, 329.63], // Am
         [174.61, 220, 261.63], // F
@@ -2205,16 +2753,15 @@
       }
     }
 
-    // Auto-Ducking on Hold to Speak
     function applyDucking(duck) {
       if (!bgmGainNode || !isBgmPlaying) return;
-      const targetGain = duck ? 0.05 : 0.25; // -14 dB drop
+      const targetGain = duck ? 0.05 : 0.25;
       bgmGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-      bgmGainNode.gain.setTargetAtTime(targetGain, audioCtx.currentTime, duck ? 0.035 : 0.65); // ~35ms attack, ~650ms release
+      bgmGainNode.gain.setTargetAtTime(targetGain, audioCtx.currentTime, duck ? 0.035 : 0.65);
 
       duckingStatusText.textContent = duck ?
-        '🎙️ SPEECH ACTIVE: BGM DUCKED by -14 dB (0.20x)' :
-        'BGM: Playing Lo-Fi Chords • Duck Gain: 1.00x (0 dB)';
+        '🎙️ Speaking: Music lowered by 80%' :
+        'Music: Playing • Lowers to 20% while you speak';
       duckingStatusText.style.color = duck ? 'var(--brand-bright)' : 'var(--text-dim)';
     }
 
@@ -2229,10 +2776,10 @@
     const presetButtons = document.querySelectorAll('[data-preset]');
     const presetStatusText = document.getElementById('presetStatusText');
     const presetLabels = {
-      natural: 'Filter: 80Hz HPF + Flat Linear Response',
-      clear: 'Filter: 100Hz HPF + +4.5dB Peaking EQ at 3,000 Hz',
-      reverb: 'Singing DSP: 160ms Slapback Delay + Concert Plate Reverb',
-      robot: 'Modulation: 140Hz Metallic Ring Modulation Oscillator'
+      natural: 'Natural: Warm and balanced for conversation',
+      clear: 'Clear Voice: Extra presence boost (+4.5 dB) for crowded halls',
+      reverb: 'Singing Reverb: Concert hall reverb with subtle vocal echo',
+      robot: 'Robot Fun: Fun modulated voice effect for games and skits'
     };
 
     presetButtons.forEach(btn => {
@@ -2243,7 +2790,6 @@
         presetStatusText.textContent = presetLabels[p];
         presetStatusText.style.color = 'var(--text-main)';
 
-        // Quick audible confirmation chime
         initAudioContext();
         if (audioCtx) {
           const osc = audioCtx.createOscillator();
@@ -2275,22 +2821,22 @@
         sliderDistanceVal.textContent = `${val} cm (Very Close)`;
         sliderDistanceVal.style.color = 'var(--accent-amber)';
         distanceAcousticFeedback.innerHTML = `
-          <span style="color:var(--accent-amber);">Proximity Bass Boost (+6dB)</span>
-          <span style="color:var(--accent-amber); font-weight:700;">⚠ High Plosive Popping Risk (Use Pop Filter)</span>
+          <span style="color:var(--accent-amber);">Heavy bass / popping risk</span>
+          <span style="color:var(--accent-amber); font-weight:700;">⚠ Speak gently to avoid pops</span>
         `;
       } else if (val <= 14) {
-        sliderDistanceVal.textContent = `${val} cm (Optimal Sweet Spot)`;
+        sliderDistanceVal.textContent = `${val} cm (Sweet Spot)`;
         sliderDistanceVal.style.color = 'var(--accent-emerald)';
         distanceAcousticFeedback.innerHTML = `
-          <span>Proximity Effect: Clean & Transparent</span>
-          <span style="color:var(--accent-emerald); font-weight:700;">✓ Safe Acoustics • Zero Feedback</span>
+          <span>Sound clarity: Clean and balanced</span>
+          <span style="color:var(--accent-emerald); font-weight:700;">✓ Safe Acoustics • No feedback danger</span>
         `;
       } else {
-        sliderDistanceVal.textContent = `${val} cm (Distant)`;
+        sliderDistanceVal.textContent = `${val} cm (Far)`;
         sliderDistanceVal.style.color = 'var(--accent-cyan)';
         distanceAcousticFeedback.innerHTML = `
-          <span>Ambient Room Pick-Up: Elevated</span>
-          <span style="color:var(--accent-cyan); font-weight:700;">ℹ Increase Input Gain (+3 to +6 dB)</span>
+          <span>Room echo may be picked up</span>
+          <span style="color:var(--accent-cyan); font-weight:700;">ℹ Increase input volume (+3 to +6 dB)</span>
         `;
       }
     });
