@@ -60,7 +60,11 @@ class UdpAudioStreamer {
     }
     fun startReceiver() {
         check(!running); failed = false
-        val sock = DatagramSocket(AudioServiceDiscovery.PORT).also { socket = it; it.soTimeout = 2 }
+        val sock = DatagramSocket(null).apply {
+            reuseAddress = true
+            bind(InetSocketAddress(AudioServiceDiscovery.PORT))
+            soTimeout = 2
+        }.also { socket = it }
         running = true
         job = scope.launch {
             val packet = DatagramPacket(ByteArray(973), 973)

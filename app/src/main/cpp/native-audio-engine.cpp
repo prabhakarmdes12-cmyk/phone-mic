@@ -133,8 +133,15 @@ bool NativeAudioEngine::start() {
     isMuted_.store(false);
     dcBlockerPrevX_ = dcBlockerPrevY_ = 0.0f;
     hpfFilter_.reset(); eqMidFilter_.reset();
+    std::fill(std::begin(delayBuffer_), std::end(delayBuffer_), 0.0f);
+    delayWriteIndex_ = 0;
+    reverbFeedbackLp_ = 0.0f;
+    lfoPhase_ = 0.0f;
+    robotPhase_ = 0.0f;
+    feedbackHoldFrames_ = 0;
     appliedPreset_ = -1;
     smoothedGain_ = 0.0f;
+    duckGain_ = 1.0f;
     if (!openStreams()) {
         closeStreams();
         LOGE("Failed to open audio streams");
@@ -207,6 +214,12 @@ void NativeAudioEngine::closeStreams() {
         outputStream_->close();
         outputStream_.reset();
     }
+    std::fill(std::begin(delayBuffer_), std::end(delayBuffer_), 0.0f);
+    delayWriteIndex_ = 0;
+    reverbFeedbackLp_ = 0.0f;
+    lfoPhase_ = 0.0f;
+    robotPhase_ = 0.0f;
+    feedbackHoldFrames_ = 0;
 }
 
 void NativeAudioEngine::setInputGain(float gainDb) {
@@ -223,7 +236,7 @@ void NativeAudioEngine::setVoicePreset(int presetId) {
 }
 
 void NativeAudioEngine::applyVoicePreset(int presetId) {
-    // 0: Natural, 1: Clear Speech, 2: Loud Speech, 3: Warm, 4: Outdoor
+    // 0: Natural, 1: Clear Speech, 2: Loud Speech, 3: Warm, 4: Outdoor, 5: Karaoke, 6: Studio Vocal, 7: Vocal Chorus, 8: Robot Mod
     switch (presetId) {
         case 1: // Clear Speech
             hpfFilter_.setHighPass(sampleRate_, 100.0f, 0.7071f);
@@ -240,6 +253,22 @@ void NativeAudioEngine::applyVoicePreset(int presetId) {
         case 4: // Outdoor
             hpfFilter_.setHighPass(sampleRate_, 140.0f, 0.7071f);
             eqMidFilter_.setPeaking(sampleRate_, 3200.0f, 5.0f, 1.3f);
+            break;
+        case 5: // Karaoke (Singing Reverb & Echo)
+            hpfFilter_.setHighPass(sampleRate_, 65.0f, 0.7071f);
+            eqMidFilter_.setPeaking(sampleRate_, 4500.0f, 3.5f, 0.9f);
+            break;
+        case 6: // Studio Vocal
+            hpfFilter_.setHighPass(sampleRate_, 70.0f, 0.7071f);
+            eqMidFilter_.setPeaking(sampleRate_, 3500.0f, 2.5f, 1.0f);
+            break;
+        case 7: // Vocal Chorus (Voice Modulation)
+            hpfFilter_.setHighPass(sampleRate_, 80.0f, 0.7071f);
+            eqMidFilter_.setPeaking(sampleRate_, 2500.0f, 2.0f, 1.0f);
+            break;
+        case 8: // Robot Mod
+            hpfFilter_.setHighPass(sampleRate_, 150.0f, 0.7071f);
+            eqMidFilter_.setPeaking(sampleRate_, 1800.0f, 3.0f, 1.5f);
             break;
         default: // Natural
             hpfFilter_.setHighPass(sampleRate_, 80.0f, 0.7071f);
@@ -278,22 +307,104 @@ float NativeAudioEngine::nextSound() {
     return y * .23f * std::min(1.0f, t * 200) * std::clamp((2.0f - t) * 100, 0.0f, 1.0f);
 }
 
+void NativeAudioEngine::setBgmTrack(int trackId) {
+    int prev = bgmTrack_.exchange(trackId, std::memory_order_relaxed);
+    if (trackId != prev) bgmFrame_ = 0;
+}
+
+void NativeAudioEngine::setBgmVolume(float volume) {
+    bgmVolume_.store(std::clamp(volume, 0.0f, 1.0f), std::memory_order_relaxed);
+}
+
+void NativeAudioEngine::setAutoDuckingEnabled(bool enabled) {
+    autoDucking_.store(enabled, std::memory_order_relaxed);
+}
+
+float NativeAudioEngine::nextBgm() {
+    const int track = bgmTrack_.load(std::memory_order_relaxed);
+    if (track <= 0) return 0.0f;
+    const float vol = bgmVolume_.load(std::memory_order_relaxed);
+    const float t = static_cast<float>(bgmFrame_++) / sampleRate_;
+    float sample = 0.0f;
+
+    if (track == 1) {
+        // Track 1: Lo-Fi Chill / Acoustic Chords (80 BPM, Am7 -> Fmaj7 -> C -> G)
+        float loopT = fmodf(t, 12.0f);
+        int chordIdx = static_cast<int>(loopT / 3.0f);
+        float chordPhase = fmodf(loopT, 3.0f);
+        float chordEnv = expf(-1.1f * chordPhase) + 0.18f * expf(-1.5f * fmodf(chordPhase, 1.5f));
+
+        float f0 = 110.0f, f1 = 130.81f, f2 = 164.81f, f3 = 196.00f; // Am7
+        if (chordIdx == 1) { f0 = 87.31f; f1 = 110.0f; f2 = 130.81f; f3 = 164.81f; } // Fmaj7
+        else if (chordIdx == 2) { f0 = 130.81f; f1 = 164.81f; f2 = 196.0f; f3 = 246.94f; } // Cmaj
+        else if (chordIdx == 3) { f0 = 98.0f; f1 = 123.47f; f2 = 146.83f; f3 = 174.61f; } // G7
+
+        float chordSound = sinf(2.0f * M_PI * f0 * t) * 0.4f +
+                           sinf(2.0f * M_PI * f1 * t) * 0.3f +
+                           sinf(2.0f * M_PI * f2 * t) * 0.25f +
+                           sinf(2.0f * M_PI * f3 * t) * 0.2f;
+
+        float beatT = fmodf(chordPhase, 0.75f);
+        float kick = sinf(2.0f * M_PI * (75.0f - 40.0f * beatT) * beatT) * expf(-14.0f * beatT);
+        sample = chordSound * chordEnv * 0.35f + kick * 0.12f;
+    } else if (track == 2) {
+        // Track 2: Pop Acoustic Groove (110 BPM, C -> G -> Am -> F)
+        float loopT = fmodf(t, 8.72f);
+        int chordIdx = static_cast<int>(loopT / 2.18f);
+        float chordPhase = fmodf(loopT, 2.18f);
+        float strumPhase = fmodf(chordPhase, 0.2727f);
+        float strumEnv = expf(-6.0f * strumPhase);
+
+        float f0 = 130.81f, f1 = 164.81f, f2 = 196.0f; // C
+        if (chordIdx == 1) { f0 = 98.0f; f1 = 123.47f; f2 = 146.83f; } // G
+        else if (chordIdx == 2) { f0 = 110.0f; f1 = 130.81f; f2 = 164.81f; } // Am
+        else if (chordIdx == 3) { f0 = 87.31f; f1 = 110.0f; f2 = 130.81f; } // F
+
+        float strum = (sinf(2.0f * M_PI * f0 * t) + sinf(2.0f * M_PI * f1 * t) + sinf(2.0f * M_PI * f2 * t)) * 0.33f;
+        float beatT = fmodf(chordPhase, 0.545f);
+        float kick = sinf(2.0f * M_PI * 65.0f * beatT) * expf(-18.0f * beatT);
+        sample = strum * strumEnv * 0.40f + kick * 0.15f;
+    } else if (track == 3) {
+        // Track 3: Ambient Vocal Pad (Slow evolving harmonic drone for singing)
+        float sweep = 1.0f + 0.008f * sinf(0.5f * t);
+        float pad = sinf(2.0f * M_PI * 130.81f * sweep * t) * 0.35f +
+                    sinf(2.0f * M_PI * 196.00f * t) * 0.30f +
+                    sinf(2.0f * M_PI * 329.63f * t) * 0.25f +
+                    sinf(2.0f * M_PI * 392.00f * sweep * t) * 0.18f;
+        sample = pad * 0.45f;
+    } else if (track == 4) {
+        // Track 4: R&B Rhythm Beat (90 BPM syncopated groove)
+        float beatT = fmodf(t, 0.666f);
+        float kick = sinf(2.0f * M_PI * (80.0f - 45.0f * beatT) * beatT) * expf(-12.0f * beatT);
+        float hatT = fmodf(t, 0.166f);
+        noise_ ^= noise_ << 13; noise_ ^= noise_ >> 17; noise_ ^= noise_ << 5;
+        float hat = (static_cast<float>(noise_) / 2147483648.0f - 1.0f) * expf(-45.0f * hatT) * 0.08f;
+        sample = kick * 0.28f + hat;
+    }
+
+    return sample * vol;
+}
+
 void NativeAudioEngine::processDsp(float* buffer, int32_t numFrames) {
     const int preset = requestedPreset_.load(std::memory_order_relaxed);
     // Only the output callback owns filter state and coefficients.
     if (preset != appliedPreset_) { applyVoicePreset(preset); appliedPreset_ = preset; }
     float gain = linearGain_.load(std::memory_order_relaxed);
     bool muted = isMuted_.load(std::memory_order_relaxed);
+    bool feedbackEnabled = feedbackProtection_.load(std::memory_order_relaxed);
 
     if (muted) {
         std::fill(buffer, buffer + numFrames, 0.0f);
         currentRmsDb_.store(-96.0f, std::memory_order_relaxed);
         currentPeakDb_.store(-96.0f, std::memory_order_relaxed);
+        isFeedbackDetected_.store(false, std::memory_order_relaxed);
+        feedbackHoldFrames_ = 0;
         return;
     }
 
     float sumSq = 0.0f;
     float peak = 0.0f;
+    int zeroCrossings = 0;
 
     for (int32_t i = 0; i < numFrames; ++i) {
         smoothedGain_ += 0.002f * (gain - smoothedGain_);
@@ -310,11 +421,71 @@ void NativeAudioEngine::processDsp(float* buffer, int32_t numFrames) {
         // 3. Speech Intelligibility EQ
         float yEq = eqMidFilter_.process(yHpf);
 
-        // 4. Brickwall Peak Limiter (-0.5 dBFS ceiling approx 0.944)
+        // 4. Dynamic Feedback Notch Filter
+        if (feedbackEnabled && feedbackHoldFrames_ > 0) {
+            yEq = feedbackNotchFilter_.process(yEq);
+        }
+
+        // 5. Singing Reverb & Voice Modulation DSP
+        float yProcessed = yEq;
+        if (preset == 5) { // Karaoke: Slapback echo + concert plate reverb
+            size_t delaySamples = static_cast<size_t>(sampleRate_ * 0.160f);
+            size_t readIndex = (delayWriteIndex_ + kDelayBufferSize - delaySamples) % kDelayBufferSize;
+            float delayed = delayBuffer_[readIndex];
+            size_t tap2Index = (delayWriteIndex_ + kDelayBufferSize - static_cast<size_t>(sampleRate_ * 0.060f)) % kDelayBufferSize;
+            float tap2 = delayBuffer_[tap2Index];
+            
+            reverbFeedbackLp_ = reverbFeedbackLp_ * 0.6f + delayed * 0.4f;
+            delayBuffer_[delayWriteIndex_] = yEq + reverbFeedbackLp_ * 0.38f;
+            yProcessed = yEq * 0.85f + (delayed * 0.35f + tap2 * 0.20f);
+        } else if (preset == 6) { // Studio Vocal: Smooth room ambience
+            size_t delaySamples = static_cast<size_t>(sampleRate_ * 0.045f);
+            size_t readIndex = (delayWriteIndex_ + kDelayBufferSize - delaySamples) % kDelayBufferSize;
+            float delayed = delayBuffer_[readIndex];
+            
+            reverbFeedbackLp_ = reverbFeedbackLp_ * 0.7f + delayed * 0.3f;
+            delayBuffer_[delayWriteIndex_] = yEq + reverbFeedbackLp_ * 0.25f;
+            yProcessed = yEq * 0.92f + delayed * 0.28f;
+        } else if (preset == 7) { // Vocal Chorus (Voice Modulation)
+            lfoPhase_ += 2.0f * M_PI * 1.2f / sampleRate_;
+            if (lfoPhase_ > 2.0f * M_PI) lfoPhase_ -= 2.0f * M_PI;
+            float modMs = 0.019f + 0.005f * sinf(lfoPhase_);
+            size_t delaySamples = static_cast<size_t>(sampleRate_ * modMs);
+            size_t readIndex = (delayWriteIndex_ + kDelayBufferSize - delaySamples) % kDelayBufferSize;
+            float delayed = delayBuffer_[readIndex];
+
+            delayBuffer_[delayWriteIndex_] = yEq;
+            yProcessed = yEq * 0.65f + delayed * 0.55f;
+        } else if (preset == 8) { // Robot Voice (Ring Modulation)
+            robotPhase_ += 2.0f * M_PI * 140.0f / sampleRate_;
+            if (robotPhase_ > 2.0f * M_PI) robotPhase_ -= 2.0f * M_PI;
+            yProcessed = yEq * 0.35f + (yEq * sinf(robotPhase_)) * 0.65f;
+            delayBuffer_[delayWriteIndex_] = 0.0f;
+        } else {
+            delayBuffer_[delayWriteIndex_] = 0.0f;
+        }
+        delayWriteIndex_ = (delayWriteIndex_ + 1) % kDelayBufferSize;
+
+        // 6. Brickwall Peak Limiter (-0.5 dBFS ceiling approx 0.944)
         const float ceiling = 0.944f;
-        float yLimited = std::clamp(yEq + nextSound(), -ceiling, ceiling);
+        float bgm = nextBgm();
+        if (autoDucking_.load(std::memory_order_relaxed)) {
+            // Duck BGM by ~14 dB (0.20x) when voice exceeds -32 dBFS (0.025)
+            float target = (std::fabs(yProcessed) > 0.025f) ? 0.20f : 1.0f;
+            float rate = (target < duckGain_) ? 0.003f : 0.0003f; // ~35ms attack, ~650ms release
+            duckGain_ += (target - duckGain_) * rate;
+            bgm *= duckGain_;
+        }
+        float totalMix = yProcessed + nextSound() + bgm;
+        float yLimited = std::clamp(totalMix, -ceiling, ceiling);
 
         buffer[i] = yLimited;
+
+        // Detect zero crossings for resonance frequency estimation
+        if ((prevSample_ < 0.0f && yLimited >= 0.0f) || (prevSample_ >= 0.0f && yLimited < 0.0f)) {
+            zeroCrossings++;
+        }
+        prevSample_ = yLimited;
 
         // Accumulate metering
         sumSq += yLimited * yLimited;
@@ -329,6 +500,25 @@ void NativeAudioEngine::processDsp(float* buffer, int32_t numFrames) {
 
     currentRmsDb_.store(rmsDb, std::memory_order_relaxed);
     currentPeakDb_.store(peakDb, std::memory_order_relaxed);
+
+    // Adaptive Feedback Howling Detector
+    if (feedbackEnabled) {
+        if (feedbackHoldFrames_ > 0) {
+            feedbackHoldFrames_ -= numFrames;
+            if (feedbackHoldFrames_ <= 0) {
+                isFeedbackDetected_.store(false, std::memory_order_relaxed);
+                feedbackNotchFilter_.reset();
+            }
+        } else if (peak > 0.65f && rms > 0.45f && numFrames > 0) {
+            // Sustained pure tone resonance signature (high peak-to-average ratio)
+            float estFreq = (static_cast<float>(zeroCrossings) * sampleRate_) / (2.0f * static_cast<float>(numFrames));
+            if (estFreq >= 500.0f && estFreq <= 7500.0f) {
+                feedbackNotchFilter_.setNotch(sampleRate_, estFreq, 8.0f);
+                feedbackHoldFrames_ = static_cast<int>(sampleRate_ * 1.5f); // 1.5s suppression
+                isFeedbackDetected_.store(true, std::memory_order_relaxed);
+            }
+        }
+    }
 }
 
 oboe::DataCallbackResult NativeAudioEngine::onAudioReady(
@@ -422,6 +612,12 @@ Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeGetPeakDb(JNIEnv* env, job
     return engine ? engine->getCurrentPeakDb() : -96.0f;
 }
 
+JNIEXPORT jboolean JNICALL
+Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeIsFeedbackActive(JNIEnv* env, jobject thiz, jlong handle) {
+    auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
+    return engine ? engine->isFeedbackActive() : false;
+}
+
 JNIEXPORT jlong JNICALL
 Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeGetUnderruns(JNIEnv* env, jobject thiz, jlong handle) {
     auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
@@ -445,4 +641,22 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeTriggerSound(JNIEnv*, jobject, jlong handle, jint effect) {
     auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
     if (engine) engine->triggerSound(effect);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeSetBgmTrack(JNIEnv*, jobject, jlong handle, jint trackId) {
+    auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
+    if (engine) engine->setBgmTrack(trackId);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeSetBgmVolume(JNIEnv*, jobject, jlong handle, jfloat volume) {
+    auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
+    if (engine) engine->setBgmVolume(volume);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeSetAutoDucking(JNIEnv*, jobject, jlong handle, jboolean enabled) {
+    auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
+    if (engine) engine->setAutoDuckingEnabled(enabled);
 }

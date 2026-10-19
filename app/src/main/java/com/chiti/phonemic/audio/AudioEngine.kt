@@ -9,6 +9,7 @@ interface AudioEngine {
     val audioState: StateFlow<AudioState>
     val currentRmsDb: StateFlow<Float>
     val currentPeakDb: StateFlow<Float>
+    val isFeedbackActive: StateFlow<Boolean>
 
     suspend fun start(outputDeviceName: String, initialGainDb: Float = 0.0f): Boolean
     fun stop()
@@ -17,4 +18,7 @@ interface AudioEngine {
     fun setVoicePreset(presetId: Int)
     fun setFeedbackSuppression(enabled: Boolean)
     fun getUnderrunCount(): Long
+    fun setBgmTrack(trackId: Int) {}
+    fun setBgmVolume(volume: Float) {}
+    fun setAutoDucking(enabled: Boolean) {}
 }

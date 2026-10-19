@@ -34,6 +34,9 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
     private val _currentPeakDb = MutableStateFlow(-96.0f)
     override val currentPeakDb: StateFlow<Float> = _currentPeakDb.asStateFlow()
 
+    private val _isFeedbackActive = MutableStateFlow(false)
+    override val isFeedbackActive: StateFlow<Boolean> = _isFeedbackActive.asStateFlow()
+
     init {
         nativeHandle = nativeCreate()
     }
@@ -74,10 +77,13 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
         _audioState.value = AudioState.Idle
         _currentRmsDb.value = -96.0f
         _currentPeakDb.value = -96.0f
+        _isFeedbackActive.value = false
     }
 
     override fun setInputGain(gainDb: Float) {
-        nativeSetInputGain(nativeHandle, gainDb)
+        if (nativeHandle != 0L) {
+            nativeSetInputGain(nativeHandle, gainDb)
+        }
         val current = _audioState.value
         if (current is AudioState.Active) {
             _audioState.value = current.copy(gainDb = gainDb)
@@ -85,7 +91,9 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
     }
 
     override fun setMuted(muted: Boolean, reason: MuteReason) {
-        nativeSetMuted(nativeHandle, muted)
+        if (nativeHandle != 0L) {
+            nativeSetMuted(nativeHandle, muted)
+        }
         val current = _audioState.value
         if (muted && current is AudioState.Active) {
             _audioState.value = AudioState.Muted(reason = reason, previousState = current)
@@ -95,7 +103,9 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
     }
 
     override fun setVoicePreset(presetId: Int) {
-        nativeSetVoicePreset(nativeHandle, presetId)
+        if (nativeHandle != 0L) {
+            nativeSetVoicePreset(nativeHandle, presetId)
+        }
         val current = _audioState.value
         if (current is AudioState.Active) {
             _audioState.value = current.copy(presetId = presetId)
@@ -103,15 +113,31 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
     }
 
     override fun setFeedbackSuppression(enabled: Boolean) {
-        nativeSetFeedbackSuppression(nativeHandle, enabled)
+        if (nativeHandle != 0L) {
+            nativeSetFeedbackSuppression(nativeHandle, enabled)
+        }
     }
 
     override fun getUnderrunCount(): Long {
-        return nativeGetUnderruns(nativeHandle)
+        return if (nativeHandle != 0L) nativeGetUnderruns(nativeHandle) else 0L
     }
 
-    fun triggerSound(effect: Int) { nativeTriggerSound(nativeHandle, effect) }
+    fun triggerSound(effect: Int) {
+        if (nativeHandle != 0L) nativeTriggerSound(nativeHandle, effect)
+    }
+    override fun setBgmTrack(trackId: Int) {
+        if (nativeHandle != 0L) nativeSetBgmTrack(nativeHandle, trackId)
+    }
+    override fun setBgmVolume(volume: Float) {
+        if (nativeHandle != 0L) nativeSetBgmVolume(nativeHandle, volume)
+    }
+    override fun setAutoDucking(enabled: Boolean) {
+        if (nativeHandle != 0L) nativeSetAutoDucking(nativeHandle, enabled)
+    }
     private external fun nativeTriggerSound(handle: Long, effect: Int)
+    private external fun nativeSetBgmTrack(handle: Long, trackId: Int)
+    private external fun nativeSetBgmVolume(handle: Long, volume: Float)
+    private external fun nativeSetAutoDucking(handle: Long, enabled: Boolean)
     private external fun nativeReadProcessed(handle: Long, target: ShortArray): Int
 
     private fun startMeteringLoop() {
@@ -121,9 +147,10 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
             while (isActive && _audioState.value is AudioState.Active) {
                 _currentRmsDb.value = nativeGetRmsDb(nativeHandle)
                 _currentPeakDb.value = nativeGetPeakDb(nativeHandle)
+                _isFeedbackActive.value = nativeIsFeedbackActive(nativeHandle)
                 val n = nativeReadProcessed(nativeHandle, pcm)
                 if (n > 0) recorder?.offer(pcm, n)
-                delay(10) // Drain processed audio off the native callback; disk worker owns file I/O.
+                delay(15) // Drain processed audio off native callback and refresh metering
             }
         }
     }
@@ -146,5 +173,6 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
     private external fun nativeSetFeedbackSuppression(handle: Long, enabled: Boolean)
     private external fun nativeGetRmsDb(handle: Long): Float
     private external fun nativeGetPeakDb(handle: Long): Float
+    private external fun nativeIsFeedbackActive(handle: Long): Boolean
     private external fun nativeGetUnderruns(handle: Long): Long
 }

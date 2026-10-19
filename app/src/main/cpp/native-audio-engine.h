@@ -64,11 +64,17 @@ public:
 
     float getCurrentRmsDb() const { return currentRmsDb_.load(); }
     float getCurrentPeakDb() const { return currentPeakDb_.load(); }
+    bool isFeedbackActive() const { return isFeedbackDetected_.load(std::memory_order_relaxed); }
     int64_t getUnderrunCount() const;
 
     size_t readProcessed(float* data, size_t count) { return recordBuffer_.read(data, count); }
     void triggerSound(int effect) { soundRequest_.store(((soundRequest_.load() + 4) & ~3) | effect); }
     float nextSound();
+    void setBgmTrack(int trackId);
+    void setBgmVolume(float volume);
+    float nextBgm();
+    void setAutoDuckingEnabled(bool enabled);
+    bool isAutoDuckingEnabled() const { return autoDucking_.load(std::memory_order_relaxed); }
     // Oboe Callbacks
     oboe::DataCallbackResult onAudioReady(
         oboe::AudioStream* stream,
@@ -111,9 +117,33 @@ private:
     BiquadFilter eqHighFilter_;
     BiquadFilter feedbackNotchFilter_;
 
+    // Feedback suppression state
+    std::atomic<bool> isFeedbackDetected_{false};
+    int feedbackHoldFrames_ = 0;
+    float prevSample_ = 0.0f;
+    int zeroCrossings_ = 0;
+    float peakInBlock_ = 0.0f;
+
     // Compressor & Limiter State
     float compressorEnv_ = 0.0f;
     float sampleRate_ = 48000.0f;
+
+    // Reverb, Vocal Modulation & Delay (for Singing)
+    static constexpr size_t kDelayBufferSize = 16384;
+    std::vector<float> delayBuffer_{kDelayBufferSize, 0.0f};
+    size_t delayWriteIndex_ = 0;
+    float reverbFeedbackLp_ = 0.0f;
+    float lfoPhase_ = 0.0f;
+    float robotPhase_ = 0.0f;
+
+    // Continuous Background Music (BGM) Synthesizer
+    std::atomic<int> bgmTrack_{0};
+    std::atomic<float> bgmVolume_{0.35f};
+    int64_t bgmFrame_ = 0;
+
+    // Smart Auto-Ducking
+    std::atomic<bool> autoDucking_{true};
+    float duckGain_ = 1.0f;
 };
 
 } // namespace phonemic

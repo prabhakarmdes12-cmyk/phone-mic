@@ -37,11 +37,30 @@ enum class VoicePreset(
     KARAOKE(
         id = 5,
         title = "Karaoke",
-        description = "Studio plate reverb and synced vocal echo.",
-        isPro = true
+        description = "Concert plate reverb and synced vocal slapback echo for singing.",
+        isPro = false
+    ),
+    STUDIO_VOCAL(
+        id = 6,
+        title = "Studio Vocal",
+        description = "Warm acoustic presence and silky room ambience for vocals.",
+        isPro = false
+    ),
+    CHORUS_MOD(
+        id = 7,
+        title = "Vocal Chorus",
+        description = "Lush voice modulation and stereo-doubling shimmer.",
+        isPro = false
+    ),
+    ROBOT_MOD(
+        id = 8,
+        title = "Robot Mod",
+        description = "Fun metallic ring modulation creative vocal effect.",
+        isPro = false
     );
 
     companion object {
-        fun fromId(id: Int): VoicePreset = entries.firstOrNull { it.id == id } ?: NATURAL
+        val ALL: List<VoicePreset> = values().toList()
+        fun fromId(id: Int): VoicePreset = ALL.firstOrNull { it.id == id } ?: NATURAL
     }
 }
