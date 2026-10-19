@@ -13,6 +13,8 @@ import androidx.core.content.ContextCompat
 import com.chiti.phonemic.bluetooth.BluetoothAudioRouter
 import com.chiti.phonemic.service.MicForegroundService
 import java.io.File
+import java.net.InetAddress
+import java.net.SocketAddress
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
@@ -42,6 +44,37 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     private val selectedReceiverFlow = MutableStateFlow<AudioReceiver?>(null)
     val selectedReceiver = selectedReceiverFlow.asStateFlow()
     private var network: UdpAudioStreamer? = null
+    private val channelList = MutableStateFlow<List<ConnectedMicChannel>>(emptyList())
+    val connectedMicChannels = channelList.asStateFlow()
+    private val pressed = MutableStateFlow(false)
+    val pttPressed = pressed.asStateFlow()
+    private var pttCapture: JavaAudioEngine? = null
+    fun setChannelGain(address: SocketAddress, gain: Float) { network?.mixer?.setGain(address, gain) }
+    fun setChannelMuted(address: SocketAddress, muted: Boolean) { network?.mixer?.setMuted(address, muted) }
+    /** Called only for an explicit foreground key/touch gesture. Release never closes group reception. */
+    fun setPttPressed(value: Boolean) {
+        if (selectedRole.value != NetworkRole.WALKIE_TALKIE) return
+        pressed.value = value
+        if (!value) {
+            network?.transmitting = false
+            pttCapture?.stop(); pttCapture = null
+            return
+        }
+        if (state.value is AudioState.Active) startPttCapture()
+        else scope.launch { if (!start(router.connectedOutput.value?.name ?: "Phone speaker", gain)) pressed.value = false }
+    }
+    private fun startPttCapture() {
+        if (!pressed.value || pttCapture != null || state.value !is AudioState.Active) return
+        val transport = network ?: return
+        scope.launch {
+            if (!pressed.value) return@launch
+            val capture = JavaAudioEngine(context, NetworkRole.TRANSMITTER, transport)
+            capture.setVoicePreset(preset); capture.setInputGain(gain)
+            if (capture.start("LAN-1", gain) && pressed.value) {
+                pttCapture = capture; transport.transmitting = true
+            } else { capture.stop(); pressed.value = false }
+        }
+    }
     private var preview: MediaPlayer? = null
     private val playingFile = MutableStateFlow<File?>(null)
     val currentlyPlaying = playingFile.asStateFlow()
@@ -197,7 +230,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     }
     override suspend fun start(outputDeviceName: String, initialGainDb: Float): Boolean {
         if (state.value is AudioState.Active || state.value == AudioState.Connecting) return true
-        if (selectedRole.value != NetworkRole.RECEIVER && ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        if (selectedRole.value != NetworkRole.RECEIVER_MIXER && ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             state.value = AudioState.Error("Microphone permission is required"); return false
         }
         if (selectedRole.value == NetworkRole.TRANSMITTER && selectedReceiverFlow.value == null) {
@@ -218,11 +251,14 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         try {
             when (selectedRole.value) {
                 NetworkRole.TRANSMITTER -> {
-                    network = UdpAudioStreamer().also { it.startTransmitter(checkNotNull(selectedReceiverFlow.value)) }
+                    network = UdpAudioStreamer(context).also { it.startTransmitter(checkNotNull(selectedReceiverFlow.value)) }
                 }
-                NetworkRole.RECEIVER -> {
-                    network = UdpAudioStreamer().also { it.startReceiver() }
+                NetworkRole.RECEIVER_MIXER -> {
+                    network = UdpAudioStreamer(context).also { it.startReceiver() }
                     discovery.registerService()
+                }
+                NetworkRole.WALKIE_TALKIE -> {
+                    network = UdpAudioStreamer(context).also { it.startWalkieTalkie(InetAddress.getByName(UdpAudioStreamer.GROUP), AudioServiceDiscovery.PORT) }
                 }
                 else -> Unit
             }
@@ -254,14 +290,21 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         }
         engine = candidate
         state.value = AudioState.Active(deviceName, 0, gain, preset)
+        if (selectedRole.value == NetworkRole.WALKIE_TALKIE && pressed.value) startPttCapture()
         val active = checkNotNull(candidate)
         meters = scope.launch {
+            var telemetryTicks = 0
             while (isActive) {
-                network?.let { networkMessage.value = it.status.value }
+                network?.let {
+                    if (telemetryTicks++ % 3 == 0) { it.publishTelemetry(); channelList.value = it.mixer.snapshot() }
+                    networkMessage.value = it.status.value
+                }
                 if (network?.failed == true) {
                     setMuted(true, MuteReason.NETWORK_DISCONNECTED); break
                 }
-                rms.value = active.currentRmsDb.value; peak.value = active.currentPeakDb.value
+                rms.value = pttCapture?.currentRmsDb?.value ?: active.currentRmsDb.value
+                peak.value = pttCapture?.currentPeakDb?.value ?: active.currentPeakDb.value
+                if (pttCapture?.audioState?.value is AudioState.Error) setPttPressed(false)
                 feedback.value = active.isFeedbackActive.value
                 if (active.audioState.value is AudioState.Error) {
                     stop(); state.value = AudioState.Error("Audio device stopped. Tap to retry."); break
@@ -273,11 +316,15 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     }
     private fun closeEngine() {
         meters?.cancel(); meters = null
+        pressed.value = false
+        network?.transmitting = false
+        pttCapture?.stop(); pttCapture = null
         engine?.stop(); engine = null
+        channelList.value = emptyList()
         recorder.stop()
         stopPlayback()
         network?.stop(); network = null
-        if (selectedRole.value == NetworkRole.RECEIVER) discovery.stop()
+        if (selectedRole.value == NetworkRole.RECEIVER_MIXER) discovery.stop()
         audioManager.abandonAudioFocusRequest(focus)
         rms.value = -96f; peak.value = -96f
         feedback.value = false
@@ -286,7 +333,11 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         closeEngine(); state.value = AudioState.Idle
         context.stopService(android.content.Intent(context, MicForegroundService::class.java))
     }
-    fun serviceDestroyed() { closeEngine(); state.value = AudioState.Idle }
+    fun serviceStartFailed(message: String) { closeEngine(); state.value = AudioState.Error(message) }
+    fun serviceDestroyed() {
+        val error = state.value as? AudioState.Error
+        closeEngine(); state.value = error ?: AudioState.Idle
+    }
     override fun setMuted(muted: Boolean, reason: MuteReason) {
         if (muted) {
             val previous = state.value as? AudioState.Active ?: return
@@ -295,7 +346,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
             start(router.connectedOutput.value?.name ?: "Phone speaker", gain)
         }
     }
-    override fun setInputGain(gainDb: Float) { gain = gainDb.coerceIn(-12f, 12f); engine?.setInputGain(gain) }
+    override fun setInputGain(gainDb: Float) { gain = gainDb.coerceIn(-12f, 12f); engine?.setInputGain(gain); pttCapture?.setInputGain(gain) }
     override fun setVoicePreset(presetId: Int) { preset = presetId.coerceIn(0, 8); engine?.setVoicePreset(preset) }
     override fun setFeedbackSuppression(enabled: Boolean) {
         feedbackSuppressionEnabled = enabled

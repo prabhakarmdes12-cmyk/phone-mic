@@ -62,6 +62,11 @@ class MicForegroundService : Service() {
         super.onCreate()
         createNotificationChannel()
         scope.launch {
+            session.pttPressed.collectLatest {
+                if (session.audioState.value is AudioState.Active) updateNotification()
+            }
+        }
+        scope.launch {
             session.audioState.collectLatest { state ->
                 isMuted = state is AudioState.Muted
                 if (state is AudioState.Active || state is AudioState.Muted) updateNotification()
@@ -73,7 +78,11 @@ class MicForegroundService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 deviceName = intent.getStringExtra(EXTRA_DEVICE_NAME) ?: "Bluetooth Speaker"
-                startForegroundWithNotification()
+                if (!startForegroundWithNotification()) {
+                    session.serviceStartFailed("Android could not start the required foreground audio service")
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
                 acquireWakeLock()
                 scope.launch { if (!session.startFromService()) stopSelf() }
             }
@@ -96,14 +105,14 @@ class MicForegroundService : Service() {
         super.onDestroy()
     }
 
-    private fun startForegroundWithNotification() {
-        runCatching {
+    private fun startForegroundWithNotification(): Boolean {
+        return runCatching {
             val notification = buildNotification()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val type = when (session.role.value) {
-                    NetworkRole.RECEIVER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                    NetworkRole.RECEIVER_MIXER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
                     NetworkRole.TRANSMITTER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                    NetworkRole.STANDALONE -> {
+                    NetworkRole.STANDALONE, NetworkRole.WALKIE_TALKIE -> {
                         if (Build.VERSION.SDK_INT >= 34) {
                             ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
                         } else {
@@ -117,7 +126,7 @@ class MicForegroundService : Service() {
             }
         }.onFailure { e ->
             android.util.Log.e("MicForegroundService", "Failed to startForeground notification", e)
-        }
+        }.isSuccess
     }
 
     private fun updateNotification() {
@@ -152,10 +161,15 @@ class MicForegroundService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val isReceiver = session.role.value == NetworkRole.RECEIVER
-        val title = if (isReceiver) "PhoneMic Speaker Station 🔊" else "PhoneMic is Live 🎙️"
+        val isReceiver = session.role.value == NetworkRole.RECEIVER_MIXER || session.role.value == NetworkRole.WALKIE_TALKIE
+        val title = when {
+            session.role.value == NetworkRole.WALKIE_TALKIE -> "PhoneMic Walkie-Talkie · LAN-1"
+            isReceiver -> "PhoneMic Speaker Hub 🔊"
+            else -> "PhoneMic is Live 🎙️"
+        }
         val statusText = when {
             isMuted -> "MUTED — Tap to resume"
+            session.role.value == NetworkRole.WALKIE_TALKIE -> if (session.pttPressed.value) "TRANSMITTING — Release PTT to listen" else "LISTENING — Hold PTT in the app to speak"
             isReceiver -> "PLAYING — Receiving wireless audio"
             else -> "LIVE — Broadcasting to $deviceName"
         }

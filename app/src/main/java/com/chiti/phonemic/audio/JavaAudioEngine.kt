@@ -39,7 +39,7 @@ class JavaAudioEngine(private val context: Context,
     override suspend fun start(outputDeviceName: String, initialGainDb: Float): Boolean {
         if (running) return true
         state.value = AudioState.Connecting
-        if (role != NetworkRole.RECEIVER && ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        if ((role != NetworkRole.RECEIVER_MIXER && role != NetworkRole.WALKIE_TALKIE) && ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             state.value = AudioState.Error("Microphone permission is required")
             return false
         }
@@ -49,7 +49,7 @@ class JavaAudioEngine(private val context: Context,
             val outputBytes = AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
             check(inputBytes > 0 && outputBytes > 0)
             val format = AudioFormat.Builder().setSampleRate(rate).setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-            val input = if (role != NetworkRole.RECEIVER) AudioRecord.Builder().setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
+            val input = if ((role != NetworkRole.RECEIVER_MIXER && role != NetworkRole.WALKIE_TALKIE)) AudioRecord.Builder().setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
                 .setAudioFormat(format.setChannelMask(AudioFormat.CHANNEL_IN_MONO).build())
                 .setBufferSizeInBytes(max(inputBytes, 1920)).build().also { record = it } else null
             val output = if (role != NetworkRole.TRANSMITTER) AudioTrack.Builder().setAudioAttributes(AudioAttributes.Builder()
@@ -68,22 +68,34 @@ class JavaAudioEngine(private val context: Context,
             state.value = AudioState.Active(outputDeviceName, 0, initialGainDb, preset)
             worker = Thread({
                 Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
+                if (role == NetworkRole.WALKIE_TALKIE) network?.playbackThread = Thread.currentThread()
+                var masterGain = 1f
                 try {
                     while (running) {
                         val n = if (input != null) input.read(samples, 0, samples.size, AudioRecord.READ_BLOCKING)
                         else {
                             // AudioTrack paces receiver playout; lack of data renders limited silence.
                             if ((network?.incoming?.available() ?: 0) >= 480) network?.incoming?.poll(samples, 480) ?: 0
-                            else { samples.fill(0); 480 }
+                            else {
+                                if (role == NetworkRole.WALKIE_TALKIE) {
+                                    java.util.concurrent.locks.LockSupport.park()
+                                    continue // Let the idle playback track enter standby; never open a microphone here.
+                                }
+                                samples.fill(0); 480
+                            }
                         }
+                        if (role == NetworkRole.WALKIE_TALKIE && network?.transmitting == true) samples.fill(0)
                         if (n <= 0) { if (running) error("Audio capture failed: $n"); break }
-                        if (role == NetworkRole.RECEIVER) {
+                        if ((role == NetworkRole.RECEIVER_MIXER || role == NetworkRole.WALKIE_TALKIE)) {
                             // Received PCM is already processed; only mix station chimes + master limiter.
-                            for (i in 0 until n) samples[i] = ((samples[i] / 32768f + soundboard.next())
-                                .coerceIn(-.944f, .944f) * 32767).toInt().toShort()
+                            for (i in 0 until n) {
+                                masterGain += .002f * (gain - masterGain)
+                                samples[i] = ((samples[i] / 32768f * masterGain + soundboard.next())
+                                    .coerceIn(-.944f, .944f) * 32767).toInt().toShort()
+                            }
                         } else dsp.process(samples, n, gain, preset)
                         recorder?.offer(samples, n)
-                        if (role == NetworkRole.RECEIVER) {
+                        if ((role == NetworkRole.RECEIVER_MIXER || role == NetworkRole.WALKIE_TALKIE)) {
                             var energy = 0f; var maximum = 0f
                             for (i in 0 until n) { val x = samples[i] / 32768f; energy += x * x; maximum = max(maximum, abs(x)) }
                             rmsValue = if (energy > 1e-10f) 10f * log10(energy / n) else -96f
@@ -114,7 +126,9 @@ class JavaAudioEngine(private val context: Context,
         running = false
         runCatching { track?.pause(); track?.flush() }
         runCatching { record?.stop() }
+        worker?.let { java.util.concurrent.locks.LockSupport.unpark(it) }
         worker?.join()
+        if (role == NetworkRole.WALKIE_TALKIE) network?.playbackThread = null
         worker = null
         record?.release(); record = null
         track?.release(); track = null

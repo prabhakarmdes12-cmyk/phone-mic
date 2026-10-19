@@ -98,6 +98,7 @@ import com.chiti.phonemic.audio.AudioSessionManager
 import com.chiti.phonemic.audio.AudioState
 import com.chiti.phonemic.audio.MuteReason
 import com.chiti.phonemic.ui.SessionTools
+import com.chiti.phonemic.ui.MixerSummaryCard
 import com.chiti.phonemic.ui.RecordingsSheet
 import com.chiti.phonemic.model.NetworkRole
 import com.chiti.phonemic.bluetooth.BluetoothAudioRouter
@@ -118,6 +119,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var audioEngine: AudioSessionManager
     private lateinit var bluetoothRouter: BluetoothAudioRouter
+    private val heldPttKeys = mutableSetOf<Int>()
     private var pttTrigger: ((Boolean) -> Unit)? = null
     private var isPttActiveCheck: () -> Boolean = { false }
 
@@ -125,7 +127,9 @@ class MainActivity : ComponentActivity() {
         if ((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) &&
             isPttActiveCheck()) {
             if (event?.repeatCount == 0) {
-                pttTrigger?.invoke(true)
+                val wasEmpty = heldPttKeys.isEmpty()
+                heldPttKeys.add(keyCode)
+                if (wasEmpty) pttTrigger?.invoke(true)
             }
             return true
         }
@@ -135,10 +139,18 @@ class MainActivity : ComponentActivity() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
         if ((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) &&
             isPttActiveCheck()) {
-            pttTrigger?.invoke(false)
+            heldPttKeys.remove(keyCode)
+            if (heldPttKeys.isEmpty()) pttTrigger?.invoke(false)
             return true
         }
         return super.onKeyUp(keyCode, event)
+    }
+
+    override fun onPause() {
+        heldPttKeys.clear()
+        if (::audioEngine.isInitialized) audioEngine.setPttPressed(false)
+        if (isPttActiveCheck()) pttTrigger?.invoke(false)
+        super.onPause()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -212,13 +224,20 @@ fun PhoneMicScreen(
     val currentConnectedDevice by rememberUpdatedState(connectedDevice)
     val currentInputGainDb by rememberUpdatedState(inputGainDb)
     val currentAudioState by rememberUpdatedState(audioState)
+    val currentNetworkRole by rememberUpdatedState(networkRole)
+    val meshPttPressed by audioEngine.pttPressed.collectAsState()
+    LaunchedEffect(meshPttPressed, networkRole) {
+        if (networkRole == NetworkRole.WALKIE_TALKIE) isPttHolding = meshPttPressed
+    }
 
     // Wire hardware volume key PTT
     DisposableEffect(Unit) {
         onRegisterPttHandler(
-            { currentMicMode == MicOperationMode.PUSH_TO_TALK },
+            { currentNetworkRole == NetworkRole.WALKIE_TALKIE || currentMicMode == MicOperationMode.PUSH_TO_TALK },
             { pressed ->
-                if (pressed) {
+                if (currentNetworkRole == NetworkRole.WALKIE_TALKIE) {
+                    audioEngine.setPttPressed(pressed)
+                } else if (pressed) {
                     isPttHolding = true
                     runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
                     val devName = currentConnectedDevice?.name ?: "Phone speaker"
@@ -237,6 +256,7 @@ fun PhoneMicScreen(
             }
         )
         onDispose {
+            audioEngine.setPttPressed(false)
             onRegisterPttHandler({ false }, null)
         }
     }
@@ -272,7 +292,7 @@ fun PhoneMicScreen(
     val isActive = audioState is AudioState.Active
     val buttonColor by animateColorAsState(
         targetValue = when {
-            isPttHolding || isActive -> Color(0xFF9955FF)
+            isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE) -> Color(0xFF9955FF)
             audioState is AudioState.Muted -> Color(0xFF382855)
             else -> Color(0xFF26262C)
         },
@@ -283,7 +303,7 @@ fun PhoneMicScreen(
     // Pulse animation based on live audio RMS level
     val normalizedRms = ((rmsDb + 60.0f) / 60.0f).coerceIn(0.0f, 1.0f)
     val pulseScale by animateFloatAsState(
-        targetValue = if (isActive || isPttHolding) 1.0f + (normalizedRms * 0.15f) else 1.0f,
+        targetValue = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) 1.0f + (normalizedRms * 0.15f) else 1.0f,
         label = "PulseScale"
     )
 
@@ -311,7 +331,13 @@ fun PhoneMicScreen(
                             color = Color.White
                         )
                         Text(
-                            text = if (isActive) "● LIVE BROADCASTING" else "READY • v1.2",
+                            text = when {
+                                networkRole == NetworkRole.WALKIE_TALKIE && meshPttPressed && isActive -> "● TRANSMITTING"
+                                networkRole == NetworkRole.WALKIE_TALKIE && isActive -> "● LISTENING · LAN-1"
+                                networkRole == NetworkRole.RECEIVER_MIXER && isActive -> "● MIXER LIVE"
+                                isActive -> "● LIVE BROADCASTING"
+                                else -> "READY • v1.2"
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = if (isActive) Color(0xFF9955FF) else Color(0xFF9DA3AF)
@@ -457,12 +483,12 @@ fun PhoneMicScreen(
                     .padding(4.dp)
             ) {
                 MicOperationMode.ALL.forEach { mode ->
-                    val isSelected = micMode == mode
+                    val isSelected = if (networkRole == NetworkRole.WALKIE_TALKIE) mode == MicOperationMode.PUSH_TO_TALK else micMode == mode
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
                             .background(if (isSelected) Color(0xFF9955FF) else Color.Transparent)
-                            .clickable {
+                            .clickable(enabled = networkRole != NetworkRole.WALKIE_TALKIE) {
                                 if (isActive) {
                                     scope.launch { audioEngine.stop() }
                                 }
@@ -552,15 +578,21 @@ fun PhoneMicScreen(
                         .background(buttonColor)
                         .border(
                             width = 4.dp,
-                            color = if (isActive || isPttHolding) Color(0xFFC499FF) else Color(0xFF383842),
+                            color = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) Color(0xFFC499FF) else Color(0xFF383842),
                             shape = CircleShape
                         )
                         .pointerInput(micMode, hasPermissions, networkRole) {
-                            val needsMic = !hasPermissions && networkRole != NetworkRole.RECEIVER
+                            val needsMic = !hasPermissions && networkRole != NetworkRole.RECEIVER_MIXER
                             if (needsMic) {
                                 detectTapGestures {
                                     permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
                                 }
+                            } else if (networkRole == NetworkRole.WALKIE_TALKIE) {
+                                detectTapGestures(onPress = {
+                                    runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                    audioEngine.setPttPressed(true)
+                                    try { tryAwaitRelease() } finally { audioEngine.setPttPressed(false) }
+                                })
                             } else if (micMode == MicOperationMode.PUSH_TO_TALK) {
                                 detectTapGestures(
                                     onPress = {
@@ -603,20 +635,23 @@ fun PhoneMicScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = when {
-                                networkRole == NetworkRole.RECEIVER -> if (isActive) Icons.Default.VolumeUp else Icons.Default.VolumeOff
-                                isActive || isPttHolding -> Icons.Default.Mic
+                                networkRole == NetworkRole.WALKIE_TALKIE -> if (meshPttPressed) Icons.Default.Mic else Icons.Default.VolumeUp
+                                networkRole == NetworkRole.RECEIVER_MIXER -> if (isActive) Icons.Default.VolumeUp else Icons.Default.VolumeOff
+                                isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE) -> Icons.Default.Mic
                                 else -> Icons.Default.MicOff
                             },
-                            contentDescription = if (networkRole == NetworkRole.RECEIVER) "Speaker Station Toggle" else "Microphone Toggle",
-                            tint = if (isActive || isPttHolding) Color(0xFF090A0B) else Color.White,
+                            contentDescription = if (networkRole == NetworkRole.RECEIVER_MIXER) "Speaker Station Toggle" else "Microphone Toggle",
+                            tint = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) Color(0xFF090A0B) else Color.White,
                             modifier = Modifier.size(64.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = when {
-                                networkRole == NetworkRole.RECEIVER && isActive -> "STATION PLAYING • STOP"
-                                networkRole == NetworkRole.RECEIVER && audioState == AudioState.Connecting -> "CONNECTING"
-                                networkRole == NetworkRole.RECEIVER -> "START SPEAKER STATION"
+                                networkRole == NetworkRole.WALKIE_TALKIE && audioState == AudioState.Connecting -> "JOINING LAN-1"
+                                networkRole == NetworkRole.WALKIE_TALKIE -> if (meshPttPressed && isActive) "TRANSMITTING • RELEASE" else "HOLD TO TALK"
+                                networkRole == NetworkRole.RECEIVER_MIXER && isActive -> "STATION PLAYING • STOP"
+                                networkRole == NetworkRole.RECEIVER_MIXER && audioState == AudioState.Connecting -> "CONNECTING"
+                                networkRole == NetworkRole.RECEIVER_MIXER -> "START SPEAKER STATION"
                                 micMode == MicOperationMode.PUSH_TO_TALK && isPttHolding -> "LIVE (PTT)"
                                 micMode == MicOperationMode.PUSH_TO_TALK -> "HOLD BUTTON / VOL KEYS"
                                 isActive -> "MIC ON • TAP TO STOP"
@@ -626,7 +661,7 @@ fun PhoneMicScreen(
                             },
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isActive || isPttHolding) Color(0xFF090A0B) else Color.White
+                            color = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) Color(0xFF090A0B) else Color.White
                         )
                     }
                 }
@@ -663,12 +698,17 @@ fun PhoneMicScreen(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = if (isActive || isPttHolding) "${rmsDb.toInt()} dBFS" else "MIC ON STANDBY",
+                    text = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) "${rmsDb.toInt()} dBFS" else "MIC ON STANDBY",
                     fontSize = 11.sp,
                     color = Color(0xFF9DA3AF)
                 )
             }
 
+            if (networkRole == NetworkRole.RECEIVER_MIXER) MixerSummaryCard(audioEngine)
+            if (networkRole == NetworkRole.WALKIE_TALKIE) {
+                Text("Channel: LAN-1 • Hold Volume Keys to Speak", fontSize = 12.sp, color = Color(0xFFC499FF))
+                androidx.compose.material3.TextButton(onClick = { audioEngine.stop() }) { Text("LEAVE CHANNEL") }
+            }
             // Quick Master Input Gain Control
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
                 Row(
