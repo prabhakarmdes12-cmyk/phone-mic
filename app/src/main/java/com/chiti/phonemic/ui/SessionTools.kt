@@ -108,11 +108,7 @@ fun SessionTools(
                             .padding(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = when (item) {
-                                NetworkRole.STANDALONE -> "Single Phone"
-                                NetworkRole.TRANSMITTER -> "Presenter (Wi-Fi)"
-                                NetworkRole.RECEIVER -> "Speaker Station"
-                            },
+                            text = item.label,
                             fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             color = if (isSelected) Color(0xFF090A0B) else Color(0xFFD1D5DB)
@@ -121,6 +117,8 @@ fun SessionTools(
                 }
             }
 
+            if (role == NetworkRole.RECEIVER_MIXER || role == NetworkRole.WALKIE_TALKIE) ChannelMixerControls(session)
+            if (role == NetworkRole.WALKIE_TALKIE) Text("LAN-1 · simultaneous talkers are mixed · trusted Wi-Fi only", fontSize = 11.sp)
             if (role != NetworkRole.STANDALONE) {
                 Text(connection, fontSize = 11.sp, color = Color(0xFF9DA3AF))
             }

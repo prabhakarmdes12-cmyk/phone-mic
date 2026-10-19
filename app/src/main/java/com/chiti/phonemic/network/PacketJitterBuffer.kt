@@ -13,6 +13,9 @@ class PacketJitterBuffer {
     private var stable = 0
     var depth = 3; private set
     var lost = 0L; private set
+    fun reset() {
+        occupied.fill(false); initialized = false; expected = 0; startAt = 0; stable = 0; depth = 3; lost = 0
+    }
     fun offer(sequence: Int, pcm: ShortArray, nowNanos: Long): Boolean {
         if (!initialized) { initialized = true; expected = sequence; startAt = nowNanos + depth * 10_000_000L }
         val delta = sequence - expected // Int overflow deliberately handles sequence wrap.

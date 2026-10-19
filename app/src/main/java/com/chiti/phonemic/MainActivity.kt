@@ -98,6 +98,7 @@ import com.chiti.phonemic.audio.AudioSessionManager
 import com.chiti.phonemic.audio.AudioState
 import com.chiti.phonemic.audio.MuteReason
 import com.chiti.phonemic.ui.SessionTools
+import com.chiti.phonemic.ui.MixerSummaryCard
 import com.chiti.phonemic.ui.RecordingsSheet
 import com.chiti.phonemic.model.NetworkRole
 import com.chiti.phonemic.bluetooth.BluetoothAudioRouter
@@ -118,6 +119,7 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var audioEngine: AudioSessionManager
     private lateinit var bluetoothRouter: BluetoothAudioRouter
+    private val heldPttKeys = mutableSetOf<Int>()
     private var pttTrigger: ((Boolean) -> Unit)? = null
     private var isPttActiveCheck: () -> Boolean = { false }
 
@@ -125,7 +127,9 @@ class MainActivity : ComponentActivity() {
         if ((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) &&
             isPttActiveCheck()) {
             if (event?.repeatCount == 0) {
-                pttTrigger?.invoke(true)
+                val wasEmpty = heldPttKeys.isEmpty()
+                heldPttKeys.add(keyCode)
+                if (wasEmpty) pttTrigger?.invoke(true)
             }
             return true
         }
@@ -135,10 +139,18 @@ class MainActivity : ComponentActivity() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
         if ((keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) &&
             isPttActiveCheck()) {
-            pttTrigger?.invoke(false)
+            heldPttKeys.remove(keyCode)
+            if (heldPttKeys.isEmpty()) pttTrigger?.invoke(false)
             return true
         }
         return super.onKeyUp(keyCode, event)
+    }
+
+    override fun onPause() {
+        heldPttKeys.clear()
+        if (::audioEngine.isInitialized) audioEngine.setPttPressed(false)
+        if (isPttActiveCheck()) pttTrigger?.invoke(false)
+        super.onPause()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -212,13 +224,20 @@ fun PhoneMicScreen(
     val currentConnectedDevice by rememberUpdatedState(connectedDevice)
     val currentInputGainDb by rememberUpdatedState(inputGainDb)
     val currentAudioState by rememberUpdatedState(audioState)
+    val currentNetworkRole by rememberUpdatedState(networkRole)
+    val meshPttPressed by audioEngine.pttPressed.collectAsState()
+    LaunchedEffect(meshPttPressed, networkRole) {
+        if (networkRole == NetworkRole.WALKIE_TALKIE) isPttHolding = meshPttPressed
+    }
 
     // Wire hardware volume key PTT
     DisposableEffect(Unit) {
         onRegisterPttHandler(
-            { currentMicMode == MicOperationMode.PUSH_TO_TALK },
+            { currentNetworkRole == NetworkRole.WALKIE_TALKIE || currentMicMode == MicOperationMode.PUSH_TO_TALK },
             { pressed ->
-                if (pressed) {
+                if (currentNetworkRole == NetworkRole.WALKIE_TALKIE) {
+                    audioEngine.setPttPressed(pressed)
+                } else if (pressed) {
                     isPttHolding = true
                     runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
                     val devName = currentConnectedDevice?.name ?: "Phone speaker"
@@ -237,6 +256,7 @@ fun PhoneMicScreen(
             }
         )
         onDispose {
+            audioEngine.setPttPressed(false)
             onRegisterPttHandler({ false }, null)
         }
     }
@@ -556,11 +576,17 @@ fun PhoneMicScreen(
                             shape = CircleShape
                         )
                         .pointerInput(micMode, hasPermissions, networkRole) {
-                            val needsMic = !hasPermissions && networkRole != NetworkRole.RECEIVER
+                            val needsMic = !hasPermissions && networkRole != NetworkRole.RECEIVER_MIXER
                             if (needsMic) {
                                 detectTapGestures {
                                     permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
                                 }
+                            } else if (networkRole == NetworkRole.WALKIE_TALKIE) {
+                                detectTapGestures(onPress = {
+                                    runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                    audioEngine.setPttPressed(true)
+                                    try { tryAwaitRelease() } finally { audioEngine.setPttPressed(false) }
+                                })
                             } else if (micMode == MicOperationMode.PUSH_TO_TALK) {
                                 detectTapGestures(
                                     onPress = {
@@ -603,20 +629,21 @@ fun PhoneMicScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = when {
-                                networkRole == NetworkRole.RECEIVER -> if (isActive) Icons.Default.VolumeUp else Icons.Default.VolumeOff
+                                networkRole == NetworkRole.RECEIVER_MIXER -> if (isActive) Icons.Default.VolumeUp else Icons.Default.VolumeOff
                                 isActive || isPttHolding -> Icons.Default.Mic
                                 else -> Icons.Default.MicOff
                             },
-                            contentDescription = if (networkRole == NetworkRole.RECEIVER) "Speaker Station Toggle" else "Microphone Toggle",
+                            contentDescription = if (networkRole == NetworkRole.RECEIVER_MIXER) "Speaker Station Toggle" else "Microphone Toggle",
                             tint = if (isActive || isPttHolding) Color(0xFF090A0B) else Color.White,
                             modifier = Modifier.size(64.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = when {
-                                networkRole == NetworkRole.RECEIVER && isActive -> "STATION PLAYING • STOP"
-                                networkRole == NetworkRole.RECEIVER && audioState == AudioState.Connecting -> "CONNECTING"
-                                networkRole == NetworkRole.RECEIVER -> "START SPEAKER STATION"
+                                networkRole == NetworkRole.WALKIE_TALKIE -> if (meshPttPressed) "TRANSMITTING • RELEASE" else "HOLD TO TALK"
+                                networkRole == NetworkRole.RECEIVER_MIXER && isActive -> "STATION PLAYING • STOP"
+                                networkRole == NetworkRole.RECEIVER_MIXER && audioState == AudioState.Connecting -> "CONNECTING"
+                                networkRole == NetworkRole.RECEIVER_MIXER -> "START SPEAKER STATION"
                                 micMode == MicOperationMode.PUSH_TO_TALK && isPttHolding -> "LIVE (PTT)"
                                 micMode == MicOperationMode.PUSH_TO_TALK -> "HOLD BUTTON / VOL KEYS"
                                 isActive -> "MIC ON • TAP TO STOP"
@@ -669,6 +696,11 @@ fun PhoneMicScreen(
                 )
             }
 
+            if (networkRole == NetworkRole.RECEIVER_MIXER) MixerSummaryCard(audioEngine)
+            if (networkRole == NetworkRole.WALKIE_TALKIE) {
+                Text("Channel: LAN-1 • Hold Volume Keys to Speak", fontSize = 12.sp, color = Color(0xFFC499FF))
+                androidx.compose.material3.TextButton(onClick = { audioEngine.stop() }) { Text("LEAVE CHANNEL") }
+            }
             // Quick Master Input Gain Control
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
                 Row(

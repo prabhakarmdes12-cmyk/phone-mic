@@ -101,9 +101,9 @@ class MicForegroundService : Service() {
             val notification = buildNotification()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val type = when (session.role.value) {
-                    NetworkRole.RECEIVER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                    NetworkRole.RECEIVER_MIXER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
                     NetworkRole.TRANSMITTER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                    NetworkRole.STANDALONE -> {
+                    NetworkRole.STANDALONE, NetworkRole.WALKIE_TALKIE -> {
                         if (Build.VERSION.SDK_INT >= 34) {
                             ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
                         } else {
@@ -152,7 +152,7 @@ class MicForegroundService : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val isReceiver = session.role.value == NetworkRole.RECEIVER
+        val isReceiver = session.role.value == NetworkRole.RECEIVER_MIXER || session.role.value == NetworkRole.WALKIE_TALKIE
         val title = if (isReceiver) "PhoneMic Speaker Station 🔊" else "PhoneMic is Live 🎙️"
         val statusText = when {
             isMuted -> "MUTED — Tap to resume"
