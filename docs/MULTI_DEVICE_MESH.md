@@ -113,3 +113,23 @@ lintDebug`, uploads PhoneMic-debug and PhoneMic-web (landing page + freshly buil
 APK). The checked-in web APK inherited from v1.2 is not automatically replaced by
 pushing source; use the latest CI web artifact for the new build. No deployment to
 main or a live web host is claimed.
+
+## Verified build evidence
+
+Application commit `393f898f4a25bd67479437dabb11b2d4a182faa0` passed GitHub CI with
+conclusion **success** and exit 0:
+
+- Native C++/Oboe build (configured APK ABIs).
+- `./gradlew clean assembleDebug testDebugUnitTest lintDebug`.
+- APK artifact upload and updated web bundle packaging.
+
+Run: https://github.com/prabhakarmdes12-cmyk/phone-mic/actions/runs/39241906819
+
+- APK: https://github.com/prabhakarmdes12-cmyk/phone-mic/actions/runs/39241906819/artifacts/12182235612
+- Web bundle with fresh APK: https://github.com/prabhakarmdes12-cmyk/phone-mic/actions/runs/39241906819/artifacts/12182265023
+
+`git diff --check` also passed. The sandbox itself still lacks Java/Android tools;
+its direct Gradle invocation cannot run, so CI is the build/test evidence. This
+is not a physical multi-phone, microphone, Wi-Fi multicast or Bluetooth test.
+Nonfatal lint/tooling warnings remain; no warning-free or production certification
+is claimed. All work stays on `arena/c5b6fcf0-phone-mic`, not main.
