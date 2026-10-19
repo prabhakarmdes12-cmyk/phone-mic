@@ -203,6 +203,7 @@ fun PhoneMicScreen(
     var isTouchLocked by remember { mutableStateOf(false) }
     var feedbackSuppressionOn by remember { mutableStateOf(true) }
     var keepScreenAwake by remember { mutableStateOf(true) }
+    var showAdvancedOptions by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
@@ -447,111 +448,6 @@ fun PhoneMicScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Scenario Optimization Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF14161C))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "CORE SCENARIOS",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF9DA3AF),
-                            letterSpacing = 1.sp
-                        )
-                        if (currentScenario != null) {
-                            Text(
-                                text = "Active Profile",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFFC499FF)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(ScenarioProfile.ALL, key = { it.id }) { profile ->
-                            val isSelected = currentScenario == profile
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(if (isSelected) Color(0xFF9955FF) else Color(0xFF1E212B))
-                                    .clickable {
-                                        runCatching {
-                                            audioEngine.applyScenarioProfile(profile)
-                                            inputGainDb = profile.defaultGainDb
-                                            selectedPresetId = profile.recommendedPreset.id
-                                            feedbackSuppressionOn = profile.feedbackSuppression
-                                            if (profile.preferPtt) {
-                                                micMode = MicOperationMode.PUSH_TO_TALK
-                                            }
-                                            runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
-                                        }.onFailure { e ->
-                                            android.util.Log.e("PhoneMic", "Error selecting scenario ${profile.id}", e)
-                                        }
-                                    }
-                                    .padding(horizontal = 14.dp, vertical = 8.dp)
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(text = profile.iconEmoji, fontSize = 14.sp)
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = profile.title,
-                                        fontSize = 12.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) Color(0xFF090A0B) else Color.White
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    // Real-Time Distance Guidance
-                    val tip = currentScenario?.distanceTip ?: "Optimal mic distance: 5–10 cm from mouth for maximum clarity without feedback."
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF1C1F2A))
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = Color(0xFFC499FF),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = tip,
-                            fontSize = 11.sp,
-                            color = Color(0xFFCBD5E1),
-                            lineHeight = 15.sp
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-            SessionTools(
-                session = audioEngine,
-                onOpenRecordings = { showRecordingsSheet = true }
-            )
-
             // Mode Selector Bar (Toggle vs Push-To-Talk)
             Spacer(modifier = Modifier.height(16.dp))
             Row(
@@ -588,7 +484,7 @@ fun PhoneMicScreen(
             // Center: Giant Microphone Action Button
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(vertical = 24.dp)
+                modifier = Modifier.padding(vertical = 20.dp)
             ) {
                 // Prominent Live Recording Banner
                 AnimatedVisibility(visible = recordingState.recording) {
@@ -636,7 +532,7 @@ fun PhoneMicScreen(
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(Color(0xFFDC2626))
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
+                                ) {
                                 Text(
                                     text = "STOP",
                                     fontSize = 11.sp,
@@ -744,7 +640,7 @@ fun PhoneMicScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 // VU Meter Representation
                 Row(
@@ -773,8 +669,8 @@ fun PhoneMicScreen(
                 )
             }
 
-            // Bottom: Gain Control & Voice Presets
-            Column(modifier = Modifier.fillMaxWidth()) {
+            // Quick Master Input Gain Control
+            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -807,49 +703,247 @@ fun PhoneMicScreen(
                         inactiveTrackColor = Color(0xFF26262C)
                     )
                 )
+            }
 
-                Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-                Text(
-                    text = "VOICE PRESET",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF9DA3AF)
+            // Clean UI: Advanced Options Toggle Button
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        showAdvancedOptions = !showAdvancedOptions
+                        runCatching { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+                    },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (showAdvancedOptions) Color(0xFF1E212E) else Color(0xFF14161C)
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (showAdvancedOptions) Color(0xFF9955FF) else Color(0xFF262A36)
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(VoicePreset.ALL, key = { it.id }) { preset ->
-                        val isSelected = preset.id == selectedPresetId
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(if (isSelected) Color(0xFF9955FF) else Color(0xFF1E1E24))
-                                .clickable {
-                                    selectedPresetId = preset.id
-                                    audioEngine.setVoicePreset(preset.id)
-                                    runCatching { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
-                                }
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(if (showAdvancedOptions) Color(0xFF9955FF) else Color(0xFF262A36)),
+                            contentAlignment = Alignment.Center
                         ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = null,
+                                tint = if (showAdvancedOptions) Color(0xFF090A0B) else Color(0xFFC499FF),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
                             Text(
-                                text = preset.title,
+                                text = if (showAdvancedOptions) "Hide Advanced Controls" else "Show Advanced Controls",
                                 fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isSelected) Color(0xFF090A0B) else Color.White
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = if (showAdvancedOptions) "Collapse scenarios, presets, & soundboard" else "Acoustic scenarios, voice presets & soundboard",
+                                fontSize = 11.sp,
+                                color = Color(0xFF9DA3AF)
                             )
                         }
                     }
+                    Box(
+                        modifier = Modifier
+                            .background(if (showAdvancedOptions) Color(0xFF382855) else Color(0xFF1E212B), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (showAdvancedOptions) "HIDE ▲" else "SHOW ▼",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (showAdvancedOptions) Color(0xFFC499FF) else Color(0xFF9DA3AF)
+                        )
+                    }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(8.dp))
-                val activePreset = VoicePreset.fromId(selectedPresetId)
-                Text(
-                    text = activePreset.description,
-                    fontSize = 11.sp,
-                    color = Color(0xFFC499FF)
-                )
+            // Advanced Options: Scenarios, Voice Presets & Session Tools
+            AnimatedVisibility(
+                visible = showAdvancedOptions,
+                enter = fadeIn() + slideInVertically(),
+                exit = fadeOut() + slideOutVertically()
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Scenario Optimization Card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF14161C))
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "CORE SCENARIOS",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF9DA3AF),
+                                    letterSpacing = 1.sp
+                                )
+                                if (currentScenario != null) {
+                                    Text(
+                                        text = "Active Profile",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFFC499FF)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(ScenarioProfile.ALL, key = { it.id }) { profile ->
+                                    val isSelected = currentScenario == profile
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(14.dp))
+                                            .background(if (isSelected) Color(0xFF9955FF) else Color(0xFF1E212B))
+                                            .clickable {
+                                                runCatching {
+                                                    audioEngine.applyScenarioProfile(profile)
+                                                    inputGainDb = profile.defaultGainDb
+                                                    selectedPresetId = profile.recommendedPreset.id
+                                                    feedbackSuppressionOn = profile.feedbackSuppression
+                                                    if (profile.preferPtt) {
+                                                        micMode = MicOperationMode.PUSH_TO_TALK
+                                                    }
+                                                    runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                                }.onFailure { e ->
+                                                    android.util.Log.e("PhoneMic", "Error selecting scenario ${profile.id}", e)
+                                                }
+                                            }
+                                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(text = profile.iconEmoji, fontSize = 14.sp)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = profile.title,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) Color(0xFF090A0B) else Color.White
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            // Real-Time Distance Guidance
+                            val tip = currentScenario?.distanceTip ?: "Optimal mic distance: 5–10 cm from mouth for maximum clarity without feedback."
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFF1C1F2A))
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = Color(0xFFC499FF),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = tip,
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFCBD5E1),
+                                    lineHeight = 15.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Voice Presets Card
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF14161C))
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp)
+                        ) {
+                            Text(
+                                text = "VOICE PRESETS",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF9DA3AF),
+                                letterSpacing = 1.sp
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                items(VoicePreset.ALL, key = { it.id }) { preset ->
+                                    val isSelected = preset.id == selectedPresetId
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .background(if (isSelected) Color(0xFF9955FF) else Color(0xFF1E1E24))
+                                            .clickable {
+                                                selectedPresetId = preset.id
+                                                audioEngine.setVoicePreset(preset.id)
+                                                runCatching { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+                                            }
+                                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = preset.title,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = if (isSelected) Color(0xFF090A0B) else Color.White
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val activePreset = VoicePreset.fromId(selectedPresetId)
+                            Text(
+                                text = activePreset.description,
+                                fontSize = 11.sp,
+                                color = Color(0xFFC499FF)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Session Tools (Soundboard, BGM ducking, WAV recorder)
+                    SessionTools(
+                        session = audioEngine,
+                        onOpenRecordings = { showRecordingsSheet = true }
+                    )
+                }
             }
         }
 
