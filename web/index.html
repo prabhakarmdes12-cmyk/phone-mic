@@ -2079,29 +2079,72 @@
 
         <div class="lab-controls-grid">
 
-          <!-- 1. Auto-Ducking Demo Card -->
+          <!-- 1. Live Browser Microphone Controller Card -->
+          <div class="lab-card" style="grid-column: 1 / -1; border-color: rgba(167, 139, 250, 0.35); background: rgba(167, 139, 250, 0.06);">
+            <h4>
+              <span style="display:flex; align-items:center; gap:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" x2="12" y1="19" y2="22"/>
+                </svg>
+                <span>Live Browser Microphone</span>
+              </span>
+              <span class="mock-status-pill" id="labMicPill" style="background:rgba(255,255,255,0.08); color:var(--text-muted); font-size:0.68rem; padding:3px 8px;">
+                MIC IDLE
+              </span>
+            </h4>
+            <p>
+              Speak directly into your phone or computer mic. The phone screen on the left measures your real live voice volume, and automatically tests ducking and sound filters.
+            </p>
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
+              <button class="lab-btn" id="btnLabToggleMic" style="background:var(--brand); color:#FFFFFF; border-color:var(--brand-bright);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" aria-hidden="true">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                  <line x1="12" x2="12" y1="19" y2="22"/>
+                </svg>
+                <span id="btnLabToggleMicText">🎙️ Enable Live Mic</span>
+              </button>
+
+              <button class="lab-btn" id="btnToggleMonitor" style="font-size:0.75rem;" title="Listen to your processed voice. Please use headphones to avoid acoustic loop feedback.">
+                <span>🎧 Hear in Headphones:</span>
+                <strong id="monitorStatusText" style="margin-left:4px; color:var(--text-main);">OFF</strong>
+              </button>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; font-family:var(--font-mono); font-size:0.74rem;">
+              <span id="labMicStatusMessage" style="color:var(--text-dim);">Click button or tap phone to allow mic access.</span>
+              <span id="labLiveDb" style="color:var(--accent-emerald); font-weight:700;">-96 dBFS</span>
+            </div>
+            <!-- Live Level Bar -->
+            <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;" aria-hidden="true">
+              <div id="labLiveLevelBar" style="height:100%; width:0%; background:var(--accent-emerald); transition:width 0.05s ease;"></div>
+            </div>
+          </div>
+
+          <!-- 2. Auto-Ducking Demo Card -->
           <div class="lab-card">
             <h4>
               <span>Background Music Ducking</span>
               <span style="color:var(--brand-bright); font-size:0.75rem;">Lowers 80%</span>
             </h4>
-            <p>Start the music, then press and hold <strong>Hold to Speak</strong>. Notice how the music lowers smoothly so your voice cuts through, then returns when you finish.</p>
+            <p>Start the music, then speak into your mic (or press <strong>Hold to Speak</strong>). Notice how the music lowers automatically when you talk and returns when you pause.</p>
             <div style="display:flex; gap:8px;">
               <button class="lab-btn" id="btnToggleBgm" aria-pressed="false">▶ Play Music</button>
-              <button class="lab-btn" id="btnSimulateVoice" disabled>🎙️ Hold to Speak</button>
+              <button class="lab-btn" id="btnSimulateVoice">🎙️ Hold to Speak</button>
             </div>
             <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim);" id="duckingStatusText">
               Music: Inactive
             </div>
           </div>
 
-          <!-- 2. Voice Presets Audition -->
+          <!-- 3. Voice Presets Audition -->
           <div class="lab-card">
             <h4>
               <span>Voice Presets</span>
               <span style="color:var(--accent-cyan); font-size:0.75rem;">Sound Filters</span>
             </h4>
-            <p>Click a preset to hear how it shapes your vocal tone in real-time:</p>
+            <p>Click a preset to hear how it shapes vocal tone. If live mic is active, it processes your real voice in real-time:</p>
             <div style="display:flex; flex-wrap:wrap; gap:6px;">
               <button class="lab-btn active" data-preset="natural">Natural</button>
               <button class="lab-btn" data-preset="clear">Clear (+4.5dB)</button>
@@ -2113,7 +2156,7 @@
             </div>
           </div>
 
-          <!-- 3. Distance Guidance Simulator -->
+          <!-- 4. Distance Guidance Simulator -->
           <div class="lab-card" style="grid-column: 1 / -1;">
             <h4>
               <span>How close should you hold the phone?</span>
@@ -2948,6 +2991,314 @@
     const mockModeToggle = document.getElementById('mockModeToggle');
     const mockModePtt = document.getElementById('mockModePtt');
 
+    // Live Sound Lab Controller Elements
+    const btnLabToggleMic = document.getElementById('btnLabToggleMic');
+    const btnLabToggleMicText = document.getElementById('btnLabToggleMicText');
+    const btnToggleMonitor = document.getElementById('btnToggleMonitor');
+    const monitorStatusText = document.getElementById('monitorStatusText');
+    const labMicPill = document.getElementById('labMicPill');
+    const labMicStatusMessage = document.getElementById('labMicStatusMessage');
+    const labLiveDb = document.getElementById('labLiveDb');
+    const labLiveLevelBar = document.getElementById('labLiveLevelBar');
+
+    // Web Audio Engine State
+    let audioCtx = null;
+    let micStream = null;
+    let micSource = null;
+    let micAnalyser = null;
+    let micMonitorGain = null;
+    let limiterCompressor = null;
+    let isMicActive = false;
+    let isMonitoring = false;
+    let currentPreset = 'natural';
+    let animMeterId = null;
+    let lastVoiceDetectedTime = 0;
+    let simInterval = null;
+    let bgmGainNode = null;
+    let bgmInterval = null;
+    let isBgmPlaying = false;
+    let activePresetNodes = [];
+    let robotOsc = null;
+
+    function initAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function createLimiter(ctx) {
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.setValueAtTime(-0.5, ctx.currentTime);
+      comp.knee.setValueAtTime(0, ctx.currentTime);
+      comp.ratio.setValueAtTime(20, ctx.currentTime);
+      comp.attack.setValueAtTime(0.001, ctx.currentTime);
+      comp.release.setValueAtTime(0.05, ctx.currentTime);
+      return comp;
+    }
+
+    function showMicStatus(msg, type) {
+      if (!labMicStatusMessage) return;
+      labMicStatusMessage.textContent = msg;
+      if (type === 'active') labMicStatusMessage.style.color = 'var(--accent-emerald)';
+      else if (type === 'warning') labMicStatusMessage.style.color = 'var(--accent-amber)';
+      else if (type === 'error') labMicStatusMessage.style.color = 'var(--accent-red)';
+      else labMicStatusMessage.style.color = 'var(--text-dim)';
+    }
+
+    function setupDspPresetChain() {
+      if (!audioCtx || !micSource) return;
+
+      if (!limiterCompressor) {
+        limiterCompressor = createLimiter(audioCtx);
+        limiterCompressor.connect(audioCtx.destination);
+      }
+
+      if (!micMonitorGain) {
+        micMonitorGain = audioCtx.createGain();
+        micMonitorGain.gain.setValueAtTime(isMonitoring ? 0.7 : 0, audioCtx.currentTime);
+        micMonitorGain.connect(limiterCompressor);
+      }
+
+      // Cleanup prior preset nodes
+      activePresetNodes.forEach(node => {
+        try { node.disconnect(); } catch (e) {}
+      });
+      activePresetNodes = [];
+      if (robotOsc) {
+        try { robotOsc.stop(); robotOsc.disconnect(); } catch (e) {}
+        robotOsc = null;
+      }
+
+      if (currentPreset === 'clear') {
+        const hp = audioCtx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.setValueAtTime(100, audioCtx.currentTime);
+
+        const hs = audioCtx.createBiquadFilter();
+        hs.type = 'highshelf';
+        hs.frequency.setValueAtTime(3200, audioCtx.currentTime);
+        hs.gain.setValueAtTime(6.0, audioCtx.currentTime);
+
+        micSource.connect(hp);
+        hp.connect(hs);
+        hs.connect(micMonitorGain);
+        activePresetNodes.push(hp, hs);
+      } else if (currentPreset === 'reverb') {
+        const delay = audioCtx.createDelay();
+        delay.delayTime.setValueAtTime(0.045, audioCtx.currentTime);
+
+        const fb = audioCtx.createGain();
+        fb.gain.setValueAtTime(0.45, audioCtx.currentTime);
+
+        const lp = audioCtx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(3400, audioCtx.currentTime);
+
+        // Dry path
+        micSource.connect(micMonitorGain);
+        // Wet path
+        micSource.connect(delay);
+        delay.connect(lp);
+        lp.connect(fb);
+        fb.connect(delay);
+        lp.connect(micMonitorGain);
+        activePresetNodes.push(delay, fb, lp);
+      } else if (currentPreset === 'robot') {
+        const modOsc = audioCtx.createOscillator();
+        const modGain = audioCtx.createGain();
+        modOsc.type = 'sine';
+        modOsc.frequency.setValueAtTime(120, audioCtx.currentTime);
+        modGain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+
+        modOsc.connect(modGain.gain);
+        micSource.connect(modGain);
+        modGain.connect(micMonitorGain);
+        modOsc.start();
+        robotOsc = modOsc;
+        activePresetNodes.push(modGain);
+      } else {
+        // Natural (Flat bypass)
+        micSource.connect(micMonitorGain);
+      }
+    }
+
+    async function startLiveMic() {
+      initAudioContext();
+      if (!audioCtx) {
+        showMicStatus('Web Audio is not supported on this device.', 'error');
+        return false;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showMicStatus('Direct mic access requires HTTPS or localhost. Using test signal.', 'warning');
+        return false;
+      }
+
+      try {
+        showMicStatus('Requesting microphone permission...', 'info');
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
+        });
+        micStream = stream;
+        micSource = audioCtx.createMediaStreamSource(stream);
+        micAnalyser = audioCtx.createAnalyser();
+        micAnalyser.fftSize = 256;
+        micAnalyser.smoothingTimeConstant = 0.3;
+        micSource.connect(micAnalyser);
+
+        setupDspPresetChain();
+
+        isMicActive = true;
+        showMicStatus('🟢 Live Microphone Active — Speak to test!', 'active');
+
+        if (btnLabToggleMic) {
+          btnLabToggleMic.classList.add('active');
+          if (btnLabToggleMicText) btnLabToggleMicText.textContent = '⏹ Stop Live Mic';
+        }
+        if (labMicPill) {
+          labMicPill.textContent = '🟢 LIVE MIC';
+          labMicPill.style.background = 'rgba(52, 211, 153, 0.2)';
+          labMicPill.style.color = 'var(--accent-emerald)';
+        }
+
+        if (animMeterId) cancelAnimationFrame(animMeterId);
+        updateLiveMeter();
+        return true;
+      } catch (err) {
+        console.warn('getUserMedia error:', err);
+        showMicStatus('Microphone blocked by browser — using simulated voice test.', 'warning');
+        return false;
+      }
+    }
+
+    function stopLiveMic() {
+      if (animMeterId) {
+        cancelAnimationFrame(animMeterId);
+        animMeterId = null;
+      }
+      if (micStream) {
+        micStream.getTracks().forEach(t => t.stop());
+        micStream = null;
+      }
+      isMicActive = false;
+      showMicStatus('Mic Idle (Click to test live voice)', 'idle');
+
+      if (btnLabToggleMic) {
+        btnLabToggleMic.classList.remove('active');
+        if (btnLabToggleMicText) btnLabToggleMicText.textContent = '🎙️ Enable Live Mic';
+      }
+      if (labMicPill) {
+        labMicPill.textContent = 'MIC IDLE';
+        labMicPill.style.background = 'rgba(255,255,255,0.08)';
+        labMicPill.style.color = 'var(--text-muted)';
+      }
+      if (labLiveDb) labLiveDb.textContent = '-96 dBFS';
+      if (labLiveLevelBar) labLiveLevelBar.style.width = '0%';
+      mockDbText.textContent = '-96 dB';
+      phoneBars.forEach(b => { b.style.height = '10%'; b.className = 'mock-vu-bar'; });
+    }
+
+    const analyserTimeBuffer = new Uint8Array(128);
+
+    function updateLiveMeter() {
+      if (!isMicActive || !micAnalyser) {
+        return;
+      }
+
+      micAnalyser.getByteTimeDomainData(analyserTimeBuffer);
+      let sum = 0;
+      for (let i = 0; i < analyserTimeBuffer.length; i++) {
+        const norm = (analyserTimeBuffer[i] - 128) / 128;
+        sum += norm * norm;
+      }
+      const rms = Math.sqrt(sum / analyserTimeBuffer.length);
+      let db = rms > 0.0001 ? 20 * Math.log10(rms) : -96;
+      db = Math.max(-96, Math.min(-0.5, db));
+
+      mockDbText.textContent = `${Math.round(db)} dB`;
+      if (labLiveDb) labLiveDb.textContent = `${Math.round(db)} dBFS`;
+
+      // Energy curve: -54 dBFS (noise floor) to -0.5 dBFS (peak)
+      const range = 54;
+      const energy = Math.max(0, Math.min(1, (db + 54) / range));
+      const activeBars = Math.round(energy * vuBarCount);
+
+      phoneBars.forEach((bar, idx) => {
+        if (idx < activeBars) {
+          const h = Math.min(100, Math.round(((idx + 1) / vuBarCount) * 100));
+          bar.style.height = `${h}%`;
+          if (idx < 12) bar.className = 'mock-vu-bar green';
+          else if (idx < 17) bar.className = 'mock-vu-bar amber';
+          else bar.className = 'mock-vu-bar red';
+        } else {
+          bar.style.height = '10%';
+          bar.className = 'mock-vu-bar';
+        }
+      });
+
+      if (labLiveLevelBar) {
+        labLiveLevelBar.style.width = `${Math.round(energy * 100)}%`;
+        labLiveLevelBar.style.background = energy > 0.85 ? 'var(--accent-red)' : (energy > 0.6 ? 'var(--accent-amber)' : 'var(--accent-emerald)');
+      }
+
+      // Real vocal energy detection for auto-ducking
+      if (isBgmPlaying && bgmGainNode) {
+        if (rms > 0.025) { // ~ -32 dBFS speech threshold
+          applyDucking(true);
+          lastVoiceDetectedTime = Date.now();
+        } else if (Date.now() - lastVoiceDetectedTime > 650) {
+          applyDucking(false);
+        }
+      }
+
+      animMeterId = requestAnimationFrame(updateLiveMeter);
+    }
+
+    function runSimulatedMeter() {
+      if (simInterval) clearInterval(simInterval);
+      simInterval = setInterval(() => {
+        if (!isBroadcasting || isMicActive) {
+          clearInterval(simInterval);
+          simInterval = null;
+          return;
+        }
+        const energy = Math.random();
+        const activeBars = Math.floor(energy * (vuBarCount - 4)) + 4;
+        const dbVal = Math.round(-32 + energy * 26);
+        mockDbText.textContent = `${dbVal} dB`;
+        if (labLiveDb) labLiveDb.textContent = `${dbVal} dBFS`;
+
+        phoneBars.forEach((bar, idx) => {
+          if (idx < activeBars) {
+            const h = Math.min(100, Math.round(((idx + 1) / (activeBars || 1)) + (Math.random() * 15)));
+            bar.style.height = `${Math.min(100, h)}%`;
+            if (idx < 12) bar.className = 'mock-vu-bar green';
+            else if (idx < 17) bar.className = 'mock-vu-bar amber';
+            else bar.className = 'mock-vu-bar red';
+          } else {
+            bar.style.height = '10%';
+            bar.className = 'mock-vu-bar';
+          }
+        });
+
+        if (labLiveLevelBar) {
+          labLiveLevelBar.style.width = `${Math.round(energy * 100)}%`;
+          labLiveLevelBar.style.background = energy > 0.85 ? 'var(--accent-red)' : (energy > 0.6 ? 'var(--accent-amber)' : 'var(--accent-emerald)');
+        }
+      }, 110);
+    }
+
     function updateBroadcastUI(live) {
       if (live) {
         mockMicCircle.classList.add('live');
@@ -2991,21 +3342,36 @@
       }
     }
 
-    function startBroadcast() {
+    async function startBroadcast() {
       if (isBroadcasting) return;
       isBroadcasting = true;
       updateBroadcastUI(true);
+
+      initAudioContext();
+      if (!isMicActive) {
+        const ok = await startLiveMic();
+        if (!ok) {
+          runSimulatedMeter();
+        }
+      }
     }
 
     function stopBroadcast() {
       if (!isBroadcasting) return;
       isBroadcasting = false;
       updateBroadcastUI(false);
+      if (isMicActive) {
+        stopLiveMic();
+      }
+      if (simInterval) {
+        clearInterval(simInterval);
+        simInterval = null;
+      }
     }
 
-    function toggleBroadcast() {
+    async function toggleBroadcast() {
       if (isBroadcasting) stopBroadcast();
-      else startBroadcast();
+      else await startBroadcast();
     }
 
     // Toggle Advanced Drawer (Clean UI)
@@ -3114,26 +3480,46 @@
       });
     }
 
-    setInterval(() => {
-      if (!isBroadcasting) return;
-      const energy = Math.random();
-      const activeBars = Math.floor(energy * (vuBarCount - 4)) + 4;
-      const dbVal = Math.round(-32 + energy * 26);
-      mockDbText.textContent = `${dbVal} dB`;
-
-      phoneBars.forEach((bar, idx) => {
-        if (idx < activeBars) {
-          const h = Math.min(100, Math.round((idx + 1) * (100 / activeBars) + (Math.random() * 15)));
-          bar.style.height = `${h}%`;
-          if (idx < 12) bar.className = 'mock-vu-bar green';
-          else if (idx < 17) bar.className = 'mock-vu-bar amber';
-          else bar.className = 'mock-vu-bar red';
+    // Wire up Lab Toggle Mic & Headphones Monitor
+    if (btnLabToggleMic) {
+      btnLabToggleMic.addEventListener('click', async () => {
+        initAudioContext();
+        if (!isMicActive) {
+          const ok = await startLiveMic();
+          if (ok && !isBroadcasting) {
+            isBroadcasting = true;
+            updateBroadcastUI(true);
+          } else if (!ok) {
+            isBroadcasting = true;
+            updateBroadcastUI(true);
+            runSimulatedMeter();
+          }
         } else {
-          bar.style.height = '10%';
-          bar.className = 'mock-vu-bar';
+          stopLiveMic();
+          if (isBroadcasting) {
+            isBroadcasting = false;
+            updateBroadcastUI(false);
+          }
         }
       });
-    }, 110);
+    }
+
+    if (btnToggleMonitor) {
+      btnToggleMonitor.addEventListener('click', () => {
+        initAudioContext();
+        isMonitoring = !isMonitoring;
+        if (monitorStatusText) monitorStatusText.textContent = isMonitoring ? 'ON' : 'OFF';
+        btnToggleMonitor.classList.toggle('active', isMonitoring);
+
+        if (micMonitorGain && audioCtx) {
+          micMonitorGain.gain.setValueAtTime(isMonitoring ? 0.7 : 0, audioCtx.currentTime);
+        }
+
+        if (isMonitoring && !isMicActive) {
+          startLiveMic();
+        }
+      });
+    }
 
     // ─────────────────────────────────────────────────────────────
     // 4. Phone Scenario Chips
@@ -3182,44 +3568,38 @@
     });
 
     // ─────────────────────────────────────────────────────────────
-    // 5. Live Sound Demo & Auto-Ducking
+    // 5. Live Sound Demo & Real-Time Vocal Auto-Ducking
     // ─────────────────────────────────────────────────────────────
-    let audioCtx = null;
-    let bgmGainNode = null;
-    let bgmInterval = null;
-    let isBgmPlaying = false;
-
-    function initAudioContext() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-    }
-
     const btnToggleBgm = document.getElementById('btnToggleBgm');
     const btnSimulateVoice = document.getElementById('btnSimulateVoice');
     const duckingStatusText = document.getElementById('duckingStatusText');
 
-    btnToggleBgm.addEventListener('click', () => {
-      initAudioContext();
-      if (!isBgmPlaying) {
-        startBgmSynth();
-        btnToggleBgm.textContent = '⏹ Stop Music';
-        btnToggleBgm.classList.add('active');
-        btnToggleBgm.setAttribute('aria-pressed', 'true');
-        btnSimulateVoice.disabled = false;
-        duckingStatusText.textContent = 'Music: Playing • Lowers to 20% while you speak';
-      } else {
-        stopBgmSynth();
-        btnToggleBgm.textContent = '▶ Play Music';
-        btnToggleBgm.classList.remove('active');
-        btnToggleBgm.setAttribute('aria-pressed', 'false');
-        btnSimulateVoice.disabled = true;
-        duckingStatusText.textContent = 'Music: Inactive';
-      }
-    });
+    if (btnToggleBgm) {
+      btnToggleBgm.addEventListener('click', () => {
+        initAudioContext();
+        if (!isBgmPlaying) {
+          startBgmSynth();
+          btnToggleBgm.textContent = '⏹ Stop Music';
+          btnToggleBgm.classList.add('active');
+          btnToggleBgm.setAttribute('aria-pressed', 'true');
+          if (duckingStatusText) {
+            duckingStatusText.textContent = isMicActive ?
+              'Music: Playing • Speak into your mic to auto-duck' :
+              'Music: Playing • Speak into mic (or hold button below)';
+            duckingStatusText.style.color = 'var(--text-dim)';
+          }
+        } else {
+          stopBgmSynth();
+          btnToggleBgm.textContent = '▶ Play Music';
+          btnToggleBgm.classList.remove('active');
+          btnToggleBgm.setAttribute('aria-pressed', 'false');
+          if (duckingStatusText) {
+            duckingStatusText.textContent = 'Music: Inactive';
+            duckingStatusText.style.color = 'var(--text-dim)';
+          }
+        }
+      });
+    }
 
     function startBgmSynth() {
       isBgmPlaying = true;
@@ -3275,49 +3655,110 @@
       bgmGainNode.gain.cancelScheduledValues(audioCtx.currentTime);
       bgmGainNode.gain.setTargetAtTime(targetGain, audioCtx.currentTime, duck ? 0.035 : 0.65);
 
-      duckingStatusText.textContent = duck ?
-        '🎙️ Speaking: Music lowered by 80%' :
-        'Music: Playing • Lowers to 20% while you speak';
-      duckingStatusText.style.color = duck ? 'var(--brand-bright)' : 'var(--text-dim)';
+      if (duckingStatusText) {
+        duckingStatusText.textContent = duck ?
+          '🎙️ Voice detected: Music ducked by 80%' :
+          'Music: Playing • Lowers to 20% while you speak';
+        duckingStatusText.style.color = duck ? 'var(--brand-bright)' : 'var(--text-dim)';
+      }
     }
 
-    btnSimulateVoice.addEventListener('mousedown', () => applyDucking(true));
-    btnSimulateVoice.addEventListener('mouseup', () => applyDucking(false));
-    btnSimulateVoice.addEventListener('touchstart', (e) => { e.preventDefault(); applyDucking(true); });
-    btnSimulateVoice.addEventListener('touchend', (e) => { e.preventDefault(); applyDucking(false); });
+    if (btnSimulateVoice) {
+      btnSimulateVoice.addEventListener('mousedown', () => {
+        initAudioContext();
+        applyDucking(true);
+      });
+      btnSimulateVoice.addEventListener('mouseup', () => applyDucking(false));
+      btnSimulateVoice.addEventListener('touchstart', (e) => {
+        initAudioContext();
+        e.preventDefault();
+        applyDucking(true);
+      });
+      btnSimulateVoice.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        applyDucking(false);
+      });
+    }
 
     // ─────────────────────────────────────────────────────────────
-    // 6. Voice Preset Audition
+    // 6. Voice Preset Audition & DSP Filters
     // ─────────────────────────────────────────────────────────────
     const presetButtons = document.querySelectorAll('[data-preset]');
     const presetStatusText = document.getElementById('presetStatusText');
     const presetLabels = {
       natural: 'Natural: Warm and balanced for conversation',
-      clear: 'Clear Voice: Extra presence boost (+4.5 dB) for crowded halls',
-      reverb: 'Singing Reverb: Concert hall reverb with subtle vocal echo',
-      robot: 'Robot Fun: Fun modulated voice effect for games and skits'
+      clear: 'Clear Voice: High-presence boost (+6 dB) and low-cut filter for speech clarity',
+      reverb: 'Singing Reverb: Concert hall reverb with subtle vocal echo decay',
+      robot: 'Robot Fun: Ring modulated voice synthesis effect for games and skits'
     };
+
+    function playPresetAudition(p) {
+      initAudioContext();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      const notes = [329.63, 392.00, 523.25]; // E4, G4, C5 melodic vocal phrase
+
+      notes.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        const startTime = now + i * 0.16;
+        const dur = 0.22;
+
+        if (p === 'robot') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq * 0.75, startTime);
+        } else {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, startTime);
+        }
+
+        g.gain.setValueAtTime(0.001, startTime);
+        g.gain.linearRampToValueAtTime(0.12, startTime + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + dur);
+
+        if (p === 'clear') {
+          const hs = audioCtx.createBiquadFilter();
+          hs.type = 'highshelf';
+          hs.frequency.setValueAtTime(3000, startTime);
+          hs.gain.setValueAtTime(8.0, startTime);
+          osc.connect(hs);
+          hs.connect(g);
+        } else if (p === 'reverb') {
+          const delay = audioCtx.createDelay();
+          delay.delayTime.setValueAtTime(0.06, startTime);
+          const fb = audioCtx.createGain();
+          fb.gain.setValueAtTime(0.5, startTime);
+          osc.connect(g);
+          g.connect(delay);
+          delay.connect(fb);
+          fb.connect(delay);
+          delay.connect(audioCtx.destination);
+        } else {
+          osc.connect(g);
+        }
+
+        g.connect(audioCtx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + dur + (p === 'reverb' ? 0.6 : 0.05));
+      });
+    }
 
     presetButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         presetButtons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         const p = btn.getAttribute('data-preset');
-        presetStatusText.textContent = presetLabels[p];
-        presetStatusText.style.color = 'var(--text-main)';
+        currentPreset = p;
+        if (presetStatusText) {
+          presetStatusText.textContent = presetLabels[p];
+          presetStatusText.style.color = 'var(--text-main)';
+        }
 
-        initAudioContext();
-        if (audioCtx) {
-          const osc = audioCtx.createOscillator();
-          const g = audioCtx.createGain();
-          osc.type = p === 'robot' ? 'sawtooth' : 'sine';
-          osc.frequency.setValueAtTime(p === 'clear' ? 880 : 587, audioCtx.currentTime);
-          g.gain.setValueAtTime(0.08, audioCtx.currentTime);
-          g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
-          osc.connect(g);
-          g.connect(audioCtx.destination);
-          osc.start();
-          osc.stop(audioCtx.currentTime + 0.26);
+        if (isMicActive) {
+          setupDspPresetChain();
+        } else {
+          playPresetAudition(p);
         }
       });
     });
