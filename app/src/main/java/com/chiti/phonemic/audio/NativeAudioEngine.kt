@@ -81,7 +81,9 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
     }
 
     override fun setInputGain(gainDb: Float) {
-        nativeSetInputGain(nativeHandle, gainDb)
+        if (nativeHandle != 0L) {
+            nativeSetInputGain(nativeHandle, gainDb)
+        }
         val current = _audioState.value
         if (current is AudioState.Active) {
             _audioState.value = current.copy(gainDb = gainDb)
@@ -89,7 +91,9 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
     }
 
     override fun setMuted(muted: Boolean, reason: MuteReason) {
-        nativeSetMuted(nativeHandle, muted)
+        if (nativeHandle != 0L) {
+            nativeSetMuted(nativeHandle, muted)
+        }
         val current = _audioState.value
         if (muted && current is AudioState.Active) {
             _audioState.value = AudioState.Muted(reason = reason, previousState = current)
@@ -99,7 +103,9 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
     }
 
     override fun setVoicePreset(presetId: Int) {
-        nativeSetVoicePreset(nativeHandle, presetId)
+        if (nativeHandle != 0L) {
+            nativeSetVoicePreset(nativeHandle, presetId)
+        }
         val current = _audioState.value
         if (current is AudioState.Active) {
             _audioState.value = current.copy(presetId = presetId)
@@ -107,17 +113,27 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
     }
 
     override fun setFeedbackSuppression(enabled: Boolean) {
-        nativeSetFeedbackSuppression(nativeHandle, enabled)
+        if (nativeHandle != 0L) {
+            nativeSetFeedbackSuppression(nativeHandle, enabled)
+        }
     }
 
     override fun getUnderrunCount(): Long {
-        return nativeGetUnderruns(nativeHandle)
+        return if (nativeHandle != 0L) nativeGetUnderruns(nativeHandle) else 0L
     }
 
-    fun triggerSound(effect: Int) { nativeTriggerSound(nativeHandle, effect) }
-    override fun setBgmTrack(trackId: Int) { nativeSetBgmTrack(nativeHandle, trackId) }
-    override fun setBgmVolume(volume: Float) { nativeSetBgmVolume(nativeHandle, volume) }
-    override fun setAutoDucking(enabled: Boolean) { nativeSetAutoDucking(nativeHandle, enabled) }
+    fun triggerSound(effect: Int) {
+        if (nativeHandle != 0L) nativeTriggerSound(nativeHandle, effect)
+    }
+    override fun setBgmTrack(trackId: Int) {
+        if (nativeHandle != 0L) nativeSetBgmTrack(nativeHandle, trackId)
+    }
+    override fun setBgmVolume(volume: Float) {
+        if (nativeHandle != 0L) nativeSetBgmVolume(nativeHandle, volume)
+    }
+    override fun setAutoDucking(enabled: Boolean) {
+        if (nativeHandle != 0L) nativeSetAutoDucking(nativeHandle, enabled)
+    }
     private external fun nativeTriggerSound(handle: Long, effect: Int)
     private external fun nativeSetBgmTrack(handle: Long, trackId: Int)
     private external fun nativeSetBgmVolume(handle: Long, volume: Float)

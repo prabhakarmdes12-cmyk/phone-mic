@@ -60,6 +60,7 @@ enum class VoicePreset(
     );
 
     companion object {
-        fun fromId(id: Int): VoicePreset = entries.firstOrNull { it.id == id } ?: NATURAL
+        val ALL: List<VoicePreset> = values().toList()
+        fun fromId(id: Int): VoicePreset = ALL.firstOrNull { it.id == id } ?: NATURAL
     }
 }

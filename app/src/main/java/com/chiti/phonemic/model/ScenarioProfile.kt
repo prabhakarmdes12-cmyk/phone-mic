@@ -73,6 +73,7 @@ enum class ScenarioProfile(
     );
 
     companion object {
-        fun fromId(id: String): ScenarioProfile = entries.firstOrNull { it.id == id } ?: CLASSROOM
+        val ALL: List<ScenarioProfile> = values().toList()
+        fun fromId(id: String): ScenarioProfile = ALL.firstOrNull { it.id == id } ?: CLASSROOM
     }
 }

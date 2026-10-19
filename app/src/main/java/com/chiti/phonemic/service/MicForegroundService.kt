@@ -13,6 +13,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.chiti.phonemic.MainActivity
+import com.chiti.phonemic.R
 import com.chiti.phonemic.audio.AudioSessionManager
 import com.chiti.phonemic.audio.AudioState
 import com.chiti.phonemic.model.NetworkRole
@@ -96,28 +97,36 @@ class MicForegroundService : Service() {
     }
 
     private fun startForegroundWithNotification() {
-        val notification = buildNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val type = when (session.role.value) {
-                NetworkRole.RECEIVER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                NetworkRole.TRANSMITTER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                NetworkRole.STANDALONE -> {
-                    if (Build.VERSION.SDK_INT >= 34) {
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                    } else {
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        runCatching {
+            val notification = buildNotification()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val type = when (session.role.value) {
+                    NetworkRole.RECEIVER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                    NetworkRole.TRANSMITTER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                    NetworkRole.STANDALONE -> {
+                        if (Build.VERSION.SDK_INT >= 34) {
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                        } else {
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                        }
                     }
                 }
+                startForeground(NOTIFICATION_ID, notification, type)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
             }
-            startForeground(NOTIFICATION_ID, notification, type)
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        }.onFailure { e ->
+            android.util.Log.e("MicForegroundService", "Failed to startForeground notification", e)
         }
     }
 
     private fun updateNotification() {
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, buildNotification())
+        runCatching {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.notify(NOTIFICATION_ID, buildNotification())
+        }.onFailure { e ->
+            android.util.Log.w("MicForegroundService", "Failed to update notification", e)
+        }
     }
 
     private fun buildNotification(): Notification {
@@ -155,10 +164,10 @@ class MicForegroundService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(statusText)
-            .setSmallIcon(if (isReceiver) android.R.drawable.ic_lock_silent_mode_off else android.R.drawable.ic_btn_speak_now)
+            .setSmallIcon(R.drawable.ic_microphone)
             .setContentIntent(contentPendingIntent)
-            .addAction(android.R.drawable.ic_media_pause, muteActionText, mutePendingIntent)
-            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "STOP", stopPendingIntent)
+            .addAction(R.drawable.ic_microphone, muteActionText, mutePendingIntent)
+            .addAction(R.drawable.ic_microphone, "STOP", stopPendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()

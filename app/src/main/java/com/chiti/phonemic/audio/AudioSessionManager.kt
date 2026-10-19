@@ -309,11 +309,15 @@ class AudioSessionManager private constructor(private val context: Context) : Au
     }
 
     fun applyScenarioProfile(profile: ScenarioProfile) {
-        selectedScenario.value = profile
-        setVoicePreset(profile.recommendedPreset.id)
-        setInputGain(profile.defaultGainDb)
-        setAutoDucking(profile.autoDucking)
-        setFeedbackSuppression(profile.feedbackSuppression)
+        runCatching {
+            selectedScenario.value = profile
+            setVoicePreset(profile.recommendedPreset.id)
+            setInputGain(profile.defaultGainDb)
+            setAutoDucking(profile.autoDucking)
+            setFeedbackSuppression(profile.feedbackSuppression)
+        }.onFailure { e ->
+            android.util.Log.e("AudioSessionManager", "Error applying scenario profile ${profile.id}", e)
+        }
     }
 
     fun clearScenarioProfile() {

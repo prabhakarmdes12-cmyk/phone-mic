@@ -78,6 +78,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -106,7 +107,11 @@ import kotlinx.coroutines.launch
 
 enum class MicOperationMode(val label: String, val iconDescription: String) {
     TOGGLE("Toggle", "Tap once to talk"),
-    PUSH_TO_TALK("Push to Talk", "Hold down to speak")
+    PUSH_TO_TALK("Push to Talk", "Hold down to speak");
+
+    companion object {
+        val ALL: List<MicOperationMode> = values().toList()
+    }
 }
 
 class MainActivity : ComponentActivity() {
@@ -202,25 +207,30 @@ fun PhoneMicScreen(
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
 
+    val currentMicMode by rememberUpdatedState(micMode)
+    val currentConnectedDevice by rememberUpdatedState(connectedDevice)
+    val currentInputGainDb by rememberUpdatedState(inputGainDb)
+    val currentAudioState by rememberUpdatedState(audioState)
+
     // Wire hardware volume key PTT
-    DisposableEffect(micMode, connectedDevice, inputGainDb, audioState) {
+    DisposableEffect(Unit) {
         onRegisterPttHandler(
-            { micMode == MicOperationMode.PUSH_TO_TALK },
+            { currentMicMode == MicOperationMode.PUSH_TO_TALK },
             { pressed ->
                 if (pressed) {
                     isPttHolding = true
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    val devName = connectedDevice?.name ?: "Phone speaker"
+                    runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+                    val devName = currentConnectedDevice?.name ?: "Phone speaker"
                     scope.launch {
-                        if (audioState is AudioState.Muted) {
+                        if (currentAudioState is AudioState.Muted) {
                             audioEngine.setMuted(false)
-                        } else if (audioState !is AudioState.Active) {
-                            audioEngine.start(devName, inputGainDb)
+                        } else if (currentAudioState !is AudioState.Active) {
+                            audioEngine.start(devName, currentInputGainDb)
                         }
                     }
                 } else {
                     isPttHolding = false
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    runCatching { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
                     audioEngine.setMuted(true, MuteReason.PUSH_TO_TALK_RELEASED)
                 }
             }
@@ -473,20 +483,25 @@ fun PhoneMicScreen(
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(ScenarioProfile.entries) { profile ->
+                        items(ScenarioProfile.ALL, key = { it.id }) { profile ->
                             val isSelected = currentScenario == profile
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(if (isSelected) Color(0xFF9955FF) else Color(0xFF1E212B))
                                     .clickable {
-                                        audioEngine.applyScenarioProfile(profile)
-                                        inputGainDb = profile.defaultGainDb
-                                        selectedPresetId = profile.recommendedPreset.id
-                                        if (profile.preferPtt) {
-                                            micMode = MicOperationMode.PUSH_TO_TALK
+                                        runCatching {
+                                            audioEngine.applyScenarioProfile(profile)
+                                            inputGainDb = profile.defaultGainDb
+                                            selectedPresetId = profile.recommendedPreset.id
+                                            feedbackSuppressionOn = profile.feedbackSuppression
+                                            if (profile.preferPtt) {
+                                                micMode = MicOperationMode.PUSH_TO_TALK
+                                            }
+                                            runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                        }.onFailure { e ->
+                                            android.util.Log.e("PhoneMic", "Error selecting scenario ${profile.id}", e)
                                         }
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     }
                                     .padding(horizontal = 14.dp, vertical = 8.dp)
                             ) {
@@ -545,7 +560,7 @@ fun PhoneMicScreen(
                     .background(Color(0xFF16181C))
                     .padding(4.dp)
             ) {
-                MicOperationMode.entries.forEach { mode ->
+                MicOperationMode.ALL.forEach { mode ->
                     val isSelected = micMode == mode
                     Box(
                         modifier = Modifier
@@ -556,7 +571,7 @@ fun PhoneMicScreen(
                                     scope.launch { audioEngine.stop() }
                                 }
                                 micMode = mode
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
                             }
                             .padding(horizontal = 20.dp, vertical = 8.dp)
                     ) {
@@ -653,7 +668,7 @@ fun PhoneMicScreen(
                             } else if (micMode == MicOperationMode.PUSH_TO_TALK) {
                                 detectTapGestures(
                                     onPress = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
                                         isPttHolding = true
                                         val devName = connectedDevice?.name ?: "Phone speaker"
                                         scope.launch {
@@ -666,14 +681,14 @@ fun PhoneMicScreen(
                                         tryAwaitRelease()
                                         // On release
                                         isPttHolding = false
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        runCatching { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
                                         audioEngine.setMuted(true, MuteReason.PUSH_TO_TALK_RELEASED)
                                     }
                                 )
                             } else {
                                 // Toggle Mode
                                 detectTapGestures {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
                                     scope.launch {
                                         if (isActive) {
                                             audioEngine.stop()
@@ -805,7 +820,7 @@ fun PhoneMicScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(VoicePreset.entries) { preset ->
+                    items(VoicePreset.ALL, key = { it.id }) { preset ->
                         val isSelected = preset.id == selectedPresetId
                         Box(
                             modifier = Modifier
@@ -814,7 +829,7 @@ fun PhoneMicScreen(
                                 .clickable {
                                     selectedPresetId = preset.id
                                     audioEngine.setVoicePreset(preset.id)
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    runCatching { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
                                 }
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                         ) {
@@ -829,7 +844,7 @@ fun PhoneMicScreen(
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                val activePreset = VoicePreset.entries.firstOrNull { it.id == selectedPresetId } ?: VoicePreset.NATURAL
+                val activePreset = VoicePreset.fromId(selectedPresetId)
                 Text(
                     text = activePreset.description,
                     fontSize = 11.sp,
@@ -888,7 +903,7 @@ fun PhoneMicScreen(
                     Button(
                         onClick = {
                             isTouchLocked = false
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF26262C)),
                         shape = RoundedCornerShape(24.dp),

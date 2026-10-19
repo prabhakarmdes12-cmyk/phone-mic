@@ -98,7 +98,7 @@ fun SessionTools(
 
             // Session Role Chips
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(NetworkRole.entries) { item ->
+                items(NetworkRole.ALL, key = { it.name }) { item ->
                     val isSelected = role == item
                     Box(
                         modifier = Modifier
