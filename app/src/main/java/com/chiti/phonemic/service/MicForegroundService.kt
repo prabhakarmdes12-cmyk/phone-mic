@@ -78,7 +78,11 @@ class MicForegroundService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 deviceName = intent.getStringExtra(EXTRA_DEVICE_NAME) ?: "Bluetooth Speaker"
-                startForegroundWithNotification()
+                if (!startForegroundWithNotification()) {
+                    session.serviceStartFailed("Android could not start the required foreground audio service")
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
                 acquireWakeLock()
                 scope.launch { if (!session.startFromService()) stopSelf() }
             }
@@ -101,8 +105,8 @@ class MicForegroundService : Service() {
         super.onDestroy()
     }
 
-    private fun startForegroundWithNotification() {
-        runCatching {
+    private fun startForegroundWithNotification(): Boolean {
+        return runCatching {
             val notification = buildNotification()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val type = when (session.role.value) {
@@ -122,7 +126,7 @@ class MicForegroundService : Service() {
             }
         }.onFailure { e ->
             android.util.Log.e("MicForegroundService", "Failed to startForeground notification", e)
-        }
+        }.isSuccess
     }
 
     private fun updateNotification() {

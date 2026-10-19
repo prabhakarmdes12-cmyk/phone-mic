@@ -333,7 +333,11 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         closeEngine(); state.value = AudioState.Idle
         context.stopService(android.content.Intent(context, MicForegroundService::class.java))
     }
-    fun serviceDestroyed() { closeEngine(); state.value = AudioState.Idle }
+    fun serviceStartFailed(message: String) { closeEngine(); state.value = AudioState.Error(message) }
+    fun serviceDestroyed() {
+        val error = state.value as? AudioState.Error
+        closeEngine(); state.value = error ?: AudioState.Idle
+    }
     override fun setMuted(muted: Boolean, reason: MuteReason) {
         if (muted) {
             val previous = state.value as? AudioState.Active ?: return
