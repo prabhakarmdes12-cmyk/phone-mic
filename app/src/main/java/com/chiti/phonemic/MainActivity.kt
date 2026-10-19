@@ -310,7 +310,7 @@ fun PhoneMicScreen(
                             color = Color.White
                         )
                         Text(
-                            text = if (isActive) "● LIVE BROADCASTING" else "READY",
+                            text = if (isActive) "● LIVE BROADCASTING" else "READY • v1.2",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = if (isActive) Color(0xFF9955FF) else Color(0xFF9DA3AF)
@@ -973,6 +973,11 @@ fun PhoneMicScreen(
                 },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Column {
+                            Text("App Version", fontSize = 11.sp, color = Color(0xFF9DA3AF), fontWeight = FontWeight.SemiBold)
+                            Text("v1.2.0-beta (Build 2) • Android 14 Ready", fontSize = 13.sp, color = Color(0xFFC499FF), fontWeight = FontWeight.Bold)
+                        }
+
                         Column {
                             Text("Active Audio Stack", fontSize = 11.sp, color = Color(0xFF9DA3AF), fontWeight = FontWeight.SemiBold)
                             Text(audioEngine.activeEngineName, fontSize = 13.sp, color = Color(0xFF00D5FF), fontWeight = FontWeight.Bold)
