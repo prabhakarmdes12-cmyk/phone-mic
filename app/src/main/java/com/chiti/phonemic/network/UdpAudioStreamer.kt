@@ -23,12 +23,18 @@ class UdpAudioStreamer(private val context: Context? = null) {
     @Volatile var failed = false; private set
     @Volatile private var transmissionEpoch = System.nanoTime().toInt()
     @Volatile var transmitting = false
-        set(value) { if (value && !field) transmissionEpoch++; field = value }
+        set(value) {
+            if (value && !field) transmissionEpoch++
+            field = value
+            groupSender?.let { LockSupport.unpark(it) }
+        }
     @Volatile private var running = false
     @Volatile private var rttMs = -1L
     @Volatile private var lastAckNs = 0L
     private var socket: DatagramSocket? = null
     private var worker: Thread? = null
+    @Volatile private var groupSender: Thread? = null
+    @Volatile var playbackThread: Thread? = null
     private var multicastLock: WifiManager.MulticastLock? = null
     private var description = "Offline"
     private var walkie = false
@@ -96,11 +102,13 @@ class UdpAudioStreamer(private val context: Context? = null) {
             var nextMix = System.nanoTime()
             var nextHello = 0L
             var epoch = transmissionEpoch - 1
+            var receiveTimeout = 2
+            if (isGroup) startGroupSender(sock, checkNotNull(destination), port)
             lastAckNs = nextMix
             try {
                 while (running) {
                     var now = System.nanoTime()
-                    if (destination != null) {
+                    if (destination != null && !isGroup) {
                         // Consumer-owned discard on PTT release; never reset a live SPSC queue.
                         if (!transmitting) {
                             while (outgoing.available() > 0) outgoing.poll(sentPcm)
@@ -118,6 +126,8 @@ class UdpAudioStreamer(private val context: Context? = null) {
                     }
                     if (!sender || outgoing.available() < 480) {
                         try {
+                            val timeout = if (isGroup && mixer.channels.isEmpty()) 1000 else 2
+                            if (timeout != receiveTimeout) { sock.soTimeout = timeout; receiveTimeout = timeout }
                             receive.length = 973; sock.receive(receive)
                             var self = false
                             if (isGroup) for (i in locals.indices) if (receive.address == locals[i]) self = true
@@ -163,7 +173,10 @@ class UdpAudioStreamer(private val context: Context? = null) {
                         mixer.expire(now)
                         mixer.render(mixed, now)
                         // Walkie standby doesn't continuously enqueue silence or wake playback.
-                        if (!isGroup || mixer.channels.isNotEmpty()) incoming.offer(mixed, 480)
+                        if (!isGroup || mixer.channels.isNotEmpty()) {
+                            incoming.offer(mixed, 480)
+                            playbackThread?.let { LockSupport.unpark(it) }
+                        }
                         nextMix += 10_000_000L
                         if (now - nextMix > 20_000_000L) nextMix = now + 10_000_000L
                     }
@@ -171,14 +184,60 @@ class UdpAudioStreamer(private val context: Context? = null) {
                 }
             } catch (e: Exception) {
                 if (running) { failed = true; mutable.value = e.message ?: "Network stopped" }
-            } finally { running = false; sock.close(); releaseLock() }
+            } finally {
+                running = false; groupSender?.let { LockSupport.unpark(it) }
+                sock.close(); releaseLock()
+            }
         }, "PhoneMic-UDP").also { it.start() }
+    }
+    /** Separate multicast transmit worker allows the receive socket to block in standby.
+     * No busy polling or microphone capture while PTT is released.
+     */
+    private fun startGroupSender(sock: DatagramSocket, group: InetAddress, port: Int) {
+        groupSender = Thread({
+            val pcm = ShortArray(480)
+            val bytes = ByteArray(972)
+            val packet = DatagramPacket(bytes, bytes.size, group, port)
+            val helloBytes = AudioPacketCodec.hello(name)
+            val hello = DatagramPacket(helloBytes, helloBytes.size, group, port)
+            var sequence = 0
+            var epoch = transmissionEpoch - 1
+            var nextHello = 0L
+            try {
+                while (running) {
+                    if (!transmitting) {
+                        while (outgoing.available() > 0) outgoing.poll(pcm)
+                        // Recheck after draining to avoid sleeping through a racing key-down wakeup.
+                        if (!transmitting && running) LockSupport.park()
+                        continue
+                    }
+                    if (epoch != transmissionEpoch) {
+                        epoch = transmissionEpoch
+                        // Discard a possible trailing old capture block before opening a new burst.
+                        while (outgoing.available() > 0) outgoing.poll(pcm)
+                        AudioPacketCodec.putInt(helloBytes, 68, epoch)
+                        repeat(3) { sock.send(hello) } // Same token: duplicate HELLO never flushes valid buffered audio.
+                        nextHello = System.nanoTime() + 1_000_000_000L
+                    }
+                    if (outgoing.available() < 480) { LockSupport.parkNanos(1_000_000); continue }
+                    val now = System.nanoTime()
+                    if (now >= nextHello) { sock.send(hello); nextHello = now + 1_000_000_000L }
+                    outgoing.poll(pcm, 480)
+                    AudioPacketCodec.encode(bytes, sequence++, now, pcm)
+                    if (transmitting) sock.send(packet)
+                }
+            } catch (e: Exception) {
+                if (running) { failed = true; mutable.value = e.message ?: "Multicast transmit failed"; running = false; sock.close() }
+            }
+        }, "PhoneMic-Multicast-TX").also { it.start() }
     }
     @Synchronized private fun releaseLock() {
         multicastLock?.let { if (it.isHeld) it.release() }; multicastLock = null
     }
     fun stop() {
         transmitting = false; running = false; socket?.close(); socket = null
-        worker?.join(); worker = null; releaseLock()
+        groupSender?.let { LockSupport.unpark(it) }
+        worker?.join(); worker = null
+        groupSender?.join(); groupSender = null; releaseLock()
     }
 }

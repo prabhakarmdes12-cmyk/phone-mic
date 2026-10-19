@@ -68,6 +68,7 @@ class JavaAudioEngine(private val context: Context,
             state.value = AudioState.Active(outputDeviceName, 0, initialGainDb, preset)
             worker = Thread({
                 Process.setThreadPriority(Process.THREAD_PRIORITY_AUDIO)
+                if (role == NetworkRole.WALKIE_TALKIE) network?.playbackThread = Thread.currentThread()
                 var masterGain = 1f
                 try {
                     while (running) {
@@ -77,7 +78,7 @@ class JavaAudioEngine(private val context: Context,
                             if ((network?.incoming?.available() ?: 0) >= 480) network?.incoming?.poll(samples, 480) ?: 0
                             else {
                                 if (role == NetworkRole.WALKIE_TALKIE) {
-                                    java.util.concurrent.locks.LockSupport.parkNanos(5_000_000)
+                                    java.util.concurrent.locks.LockSupport.park()
                                     continue // Let the idle playback track enter standby; never open a microphone here.
                                 }
                                 samples.fill(0); 480
@@ -125,7 +126,9 @@ class JavaAudioEngine(private val context: Context,
         running = false
         runCatching { track?.pause(); track?.flush() }
         runCatching { record?.stop() }
+        worker?.let { java.util.concurrent.locks.LockSupport.unpark(it) }
         worker?.join()
+        if (role == NetworkRole.WALKIE_TALKIE) network?.playbackThread = null
         worker = null
         record?.release(); record = null
         track?.release(); track = null
