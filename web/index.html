@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PhoneMic — Free Wireless Microphone App for Any Speaker</title>
-  <meta name="description" content="Turn your Android phone into a live wireless microphone for Bluetooth speakers and sound systems. No lag, ear safety protection, singing reverb, and no ads. Free public beta.">
+  <title>PhoneMic — Free Wireless Microphone, 8-Mic Mixer & Walkie-Talkie App</title>
+  <meta name="description" content="Turn your Android phone into a live wireless microphone, mix up to 8 phones through one speaker, or use instant Wi-Fi walkie-talkie. Zero lag, ear safety protection, and no ads. Free public beta.">
   <meta name="theme-color" content="#070A11">
 
   <!-- Open Graph / Meta -->
-  <meta property="og:title" content="PhoneMic — Free Wireless Microphone App">
-  <meta property="og:description" content="Turn your phone into a live wireless microphone for any Bluetooth or PA speaker. Real-time sound, ear safety limiter, singing reverb, and zero ads.">
+  <meta property="og:title" content="PhoneMic — Free Wireless Mic, 8-Mic Mixer & Walkie-Talkie">
+  <meta property="og:description" content="Turn your phone into a live wireless microphone, connect up to 8 phones to mix through one speaker, or use instant Wi-Fi walkie-talkie. Real-time sound, ear safety limiter, and zero ads.">
   <meta property="og:type" content="website">
 
   <!-- Google Fonts: Outfit for display, Inter for body, JetBrains Mono for metrics -->
@@ -788,6 +788,98 @@
       gap: 6px;
     }
 
+    /* Phone Mockup Advanced Controls Toggle */
+    .mock-toggle-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+    }
+    .mock-toggle-card:hover {
+      background: rgba(167, 139, 250, 0.12);
+      border-color: var(--brand);
+    }
+    .mock-toggle-pill {
+      background: var(--surface-3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      color: var(--brand-bright);
+    }
+
+    .mock-advanced-drawer {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px dashed var(--border-subtle);
+      border-radius: var(--radius-sm);
+    }
+
+    .mock-network-chips {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .mock-network-chips::-webkit-scrollbar { display: none; }
+
+    .mock-net-chip {
+      background: var(--surface-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-pill);
+      padding: 4px 8px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .mock-net-chip.active {
+      background: var(--brand);
+      border-color: var(--brand-bright);
+      color: var(--text-inverted);
+      font-weight: 700;
+    }
+
+    .mock-mixer-summary {
+      background: rgba(167, 139, 250, 0.08);
+      border: 1px solid rgba(167, 139, 250, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mock-mixer-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--brand-bright);
+      font-family: var(--font-mono);
+    }
+    .mock-mic-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      background: var(--surface-1);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
     /* ── Side Panel: Live Sound Lab ── */
     .lab-panel {
       background: var(--surface-1);
@@ -953,6 +1045,114 @@
       font-size: 1.05rem;
       color: var(--text-muted);
       line-height: 1.65;
+    }
+
+    /* ── Multi-Device Audio Mesh Section ── */
+    .mesh-section {
+      margin: 60px 0 40px;
+    }
+
+    .mesh-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      margin-top: 32px;
+    }
+
+    @media (min-width: 860px) {
+      .mesh-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .mesh-card-wide {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .mesh-card {
+      background: var(--surface-1);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      transition: all 0.25s ease;
+    }
+
+    .mesh-card:hover {
+      border-color: var(--border-brand);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .mesh-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 700;
+      width: fit-content;
+      margin-bottom: 14px;
+    }
+
+    .mesh-badge.hub {
+      background: rgba(167, 139, 250, 0.15);
+      color: var(--brand-bright);
+      border: 1px solid rgba(167, 139, 250, 0.35);
+    }
+
+    .mesh-badge.walkie {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+
+    .mesh-badge.ui {
+      background: rgba(52, 211, 153, 0.15);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(52, 211, 153, 0.35);
+    }
+
+    .mesh-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-bottom: 10px;
+    }
+
+    .mesh-card p {
+      font-size: 0.94rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+      margin-bottom: 20px;
+    }
+
+    .mesh-spec-box {
+      background: var(--surface-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.82rem;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+    }
+
+    .mesh-spec-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .mesh-spec-item strong {
+      color: var(--text-main);
     }
 
     /* ── Our Promise / Manifesto Section ── */
@@ -1552,6 +1752,7 @@
       <nav aria-label="Main Navigation">
         <ul class="nav-links">
           <li><a href="#demo" class="nav-link">Try Demo</a></li>
+          <li><a href="#mesh" class="nav-link">Multi-Phone Mesh</a></li>
           <li><a href="#scenarios" class="nav-link">Everyday Uses</a></li>
           <li><a href="#manifesto" class="nav-link">Our Promise</a></li>
           <li><a href="#comparison" class="nav-link">Compare</a></li>
@@ -1689,14 +1890,17 @@
         <div class="badge-pill white-hat-pill">
           <span>🛡️ NO ADS • NO TRACKING • 100% ON-DEVICE</span>
         </div>
+        <div class="badge-pill" style="background:rgba(56, 189, 248, 0.12); border-color:rgba(56, 189, 248, 0.3); color:var(--accent-cyan);">
+          <span>📡 8-MIC SPEAKER HUB & WALKIE-TALKIE MESH</span>
+        </div>
       </div>
 
       <h1 class="hero-title" id="hero-heading">
-        Turn your phone into a <span class="text-gradient">live wireless microphone</span>
+        Turn your phone into a <span class="text-gradient">live wireless mic & multi-phone soundstage</span>
       </h1>
 
       <p class="hero-subtitle">
-        Plug into any Bluetooth speaker or sound system with zero lag. Includes built-in ear protection against feedback shrieks, singing reverb, and background music that lowers automatically when you talk.
+        Plug into any Bluetooth speaker or sound system with zero lag. Connect up to 8 phones to mix together through one speaker, or use instant Wi-Fi walkie-talkie across unlimited devices with zero cloud lag.
       </p>
 
       <div class="hero-cta-group">
@@ -1761,32 +1965,15 @@
               </div>
               <div class="mock-device-info">
                 <h4>Bluetooth Speaker</h4>
-                <p>Connected • Zero Lag Engine</p>
+                <p id="mockDeviceStatus">Connected • Zero Lag Engine</p>
               </div>
             </div>
 
-            <!-- Core Scenario Selector -->
-            <div>
-              <div style="font-size:0.72rem; font-weight:700; color:var(--text-muted); margin-bottom:6px; font-family:var(--font-mono);">
-                CHOOSE YOUR MODE
-              </div>
-              <div class="mock-scenarios-row" role="tablist">
-                <button class="mock-scenario-chip active" id="chipClassroom" role="tab" aria-selected="true">🎓 Classroom</button>
-                <button class="mock-scenario-chip" id="chipFitness" role="tab" aria-selected="false">⚡ Fitness</button>
-                <button class="mock-scenario-chip" id="chipTour" role="tab" aria-selected="false">🏛️ Tour</button>
-                <button class="mock-scenario-chip" id="chipKaraoke" role="tab" aria-selected="false">🎤 Singing</button>
-                <button class="mock-scenario-chip" id="chipWarehouse" role="tab" aria-selected="false">🏭 Push-to-Talk</button>
-              </div>
-            </div>
-
-            <!-- VU Meter -->
-            <div class="mock-vu-box">
-              <div class="mock-vu-header">
-                <span>MIC LEVEL</span>
-                <span id="mockDbText" style="color:var(--accent-emerald);">-12 dB</span>
-              </div>
-              <div class="mock-vu-bars" id="phoneVuBars" aria-hidden="true">
-                <!-- Dynamically generated bars -->
+            <!-- Mode Selector Bar (Toggle vs Push to Talk) -->
+            <div style="display:flex; justify-content:center;">
+              <div style="display:inline-flex; background:var(--surface-1); border:1px solid var(--border-subtle); border-radius:var(--radius-pill); padding:2px;">
+                <button class="mock-scenario-chip active" id="mockModeToggle" style="padding:4px 12px; font-size:0.68rem;">TOGGLE</button>
+                <button class="mock-scenario-chip" id="mockModePtt" style="padding:4px 12px; font-size:0.68rem;">HOLD TO TALK</button>
               </div>
             </div>
 
@@ -1802,14 +1989,75 @@
               <span class="mock-mic-label" id="mockMicLabel">TAP TO TALK</span>
             </div>
 
-            <!-- Distance Guidance Helper -->
-            <div class="mock-distance-tip" id="mockDistanceTip">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="16" x2="12" y2="12"/>
-                <line x1="12" y1="8" x2="12.01" y2="8"/>
-              </svg>
-              <span id="mockTipText">Keep the phone 8–12 cm from your mouth for clear speech.</span>
+            <!-- VU Meter -->
+            <div class="mock-vu-box">
+              <div class="mock-vu-header">
+                <span id="mockMeterTitle">MIC LEVEL</span>
+                <span id="mockDbText" style="color:var(--accent-emerald);">-12 dBFS</span>
+              </div>
+              <div class="mock-vu-bars" id="phoneVuBars" aria-hidden="true">
+                <!-- Dynamically generated bars -->
+              </div>
+            </div>
+
+            <!-- Multi-Mic Hub Summary Box (Active in Hub Mode) -->
+            <div class="mock-mixer-summary" id="mockMixerSummary" style="display:none;">
+              <div class="mock-mixer-header">
+                <span>CONNECTED MICS (2 / 8)</span>
+                <span style="color:var(--accent-emerald);">MIXING LIVE</span>
+              </div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">
+                <span class="mock-mic-tag">🎙️ Pixel 8 • 0 dB</span>
+                <span class="mock-mic-tag">🎙️ Galaxy S23 • +3 dB</span>
+              </div>
+            </div>
+
+            <!-- Advanced Controls Expandable Card (Real App Clean UI) -->
+            <div class="mock-toggle-card" id="mockToggleCard" role="button" tabindex="0" aria-expanded="false" aria-controls="mockAdvancedDrawer">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:0.9rem;">🎛️</span>
+                <span>ADVANCED CONTROLS</span>
+              </div>
+              <span class="mock-toggle-pill" id="mockTogglePill">SHOW ▼</span>
+            </div>
+
+            <!-- Advanced Drawer (Collapsed by Default) -->
+            <div class="mock-advanced-drawer" id="mockAdvancedDrawer" style="display:none;">
+              <!-- Network Mode Selector -->
+              <div>
+                <div style="font-size:0.68rem; font-weight:700; color:var(--text-muted); margin-bottom:4px; font-family:var(--font-mono);">
+                  NETWORK ROLE
+                </div>
+                <div class="mock-network-chips" role="tablist">
+                  <button class="mock-net-chip active" id="chipNetStandalone" role="tab" aria-selected="true">Single Phone</button>
+                  <button class="mock-net-chip" id="chipNetHub" role="tab" aria-selected="false">8-Mic Hub</button>
+                  <button class="mock-net-chip" id="chipNetWalkie" role="tab" aria-selected="false">Walkie-Talkie</button>
+                </div>
+              </div>
+
+              <!-- Core Scenarios -->
+              <div>
+                <div style="font-size:0.68rem; font-weight:700; color:var(--text-muted); margin-bottom:4px; font-family:var(--font-mono);">
+                  CORE SCENARIOS
+                </div>
+                <div class="mock-scenarios-row" role="tablist">
+                  <button class="mock-scenario-chip active" id="chipClassroom" role="tab" aria-selected="true">🎓 Classroom</button>
+                  <button class="mock-scenario-chip" id="chipFitness" role="tab" aria-selected="false">⚡ Fitness</button>
+                  <button class="mock-scenario-chip" id="chipTour" role="tab" aria-selected="false">🏛️ Tour</button>
+                  <button class="mock-scenario-chip" id="chipKaraoke" role="tab" aria-selected="false">🎤 Singing</button>
+                  <button class="mock-scenario-chip" id="chipWarehouse" role="tab" aria-selected="false">🏭 Warehouse</button>
+                </div>
+              </div>
+
+              <!-- Distance Tip -->
+              <div class="mock-distance-tip" id="mockDistanceTip">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="16" x2="12" y2="12"/>
+                  <line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                <span id="mockTipText">Keep 8–12 cm from mouth for clear speech.</span>
+              </div>
             </div>
 
           </div>
@@ -1886,6 +2134,106 @@
         </div>
       </div>
 
+    </section>
+
+    <!-- Multi-Device Audio Mesh Section -->
+    <section id="mesh" class="mesh-section" aria-labelledby="mesh-heading">
+      <div class="section-header">
+        <div class="section-eyebrow">Multi-Phone Audio Mesh</div>
+        <h2 class="section-title" id="mesh-heading">Connect multiple phones together</h2>
+        <p class="section-desc">
+          No external hardware mixer, no cables, and no cloud servers. Turn any group of phones into an 8-microphone wireless stage or an instant Push-to-Talk intercom over local Wi-Fi.
+        </p>
+      </div>
+
+      <div class="mesh-grid">
+        <!-- Card 1: 8-Mic Speaker Hub -->
+        <div class="mesh-card">
+          <div>
+            <div class="mesh-badge hub">MANY-TO-ONE • STAGE MIXER</div>
+            <h3>8-Mic Wireless Speaker Hub</h3>
+            <p>
+              Plug one phone into your PA speaker or soundbar. Up to 8 other phones connect as wireless mics over Wi-Fi. The hub phone mixes every voice in real-time, giving you independent volume controls, mute switches, and live audio levels for each person.
+            </p>
+          </div>
+          <div class="mesh-spec-box">
+            <div class="mesh-spec-item">
+              <span>Max Wireless Mics:</span>
+              <strong>Up to 8 Phones Concurrently</strong>
+            </div>
+            <div class="mesh-spec-item">
+              <span>Digital Soft Limiter:</span>
+              <strong>-0.5 dBFS (Zero Distortion)</strong>
+            </div>
+            <div class="mesh-spec-item">
+              <span>Channel Controls:</span>
+              <strong>Per-Phone Gain (0–200%) &amp; Mute</strong>
+            </div>
+            <div class="mesh-spec-item">
+              <span>Best For:</span>
+              <strong>Panels, Q&amp;As, Co-Teaching, Choir</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Walkie-Talkie Mesh -->
+        <div class="mesh-card">
+          <div>
+            <div class="mesh-badge walkie">MANY-TO-MANY • PTT INTERCOM</div>
+            <h3>Instant Group Walkie-Talkie</h3>
+            <p>
+              Turn any group of phones into a private Push-To-Talk radio network on your local Wi-Fi. Press and hold your phone's physical volume buttons to broadcast. Everyone on the channel hears your voice instantly with zero cloud lag and zero cellular data use.
+            </p>
+          </div>
+          <div class="mesh-spec-box">
+            <div class="mesh-spec-item">
+              <span>Network Protocol:</span>
+              <strong>Wi-Fi Multicast (239.255.42.99)</strong>
+            </div>
+            <div class="mesh-spec-item">
+              <span>PTT Trigger:</span>
+              <strong>Hardware Volume Keys &amp; Screen</strong>
+            </div>
+            <div class="mesh-spec-item">
+              <span>Standby Power:</span>
+              <strong>Parked Workers (Zero Idle Drain)</strong>
+            </div>
+            <div class="mesh-spec-item">
+              <span>Best For:</span>
+              <strong>Events, Warehouses, Film Crews, Tours</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Minimalist Simplicity with 1-Tap Pro Tools -->
+        <div class="mesh-card mesh-card-wide">
+          <div>
+            <div class="mesh-badge ui">CLEAN DESIGN • ZERO OVERWHELM</div>
+            <h3>Simple at first glance. Powerful when you need it.</h3>
+            <p>
+              Most audio tools look like airplane cockpits. PhoneMic opens to an ultra-clean, minimalist screen: just your speaker status, volume slider, and one giant button to talk. Whenever you need multi-mic mixing, voice filters, soundboard tracks, or acoustic presets, one tap on <strong>Show Advanced Controls</strong> smoothly slides them into view.
+            </p>
+          </div>
+          <div class="mesh-spec-box" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+            <div class="mesh-spec-item">
+              <span>Simple Mode:</span>
+              <strong>1-Tap Tap-to-Talk &amp; Volume</strong>
+            </div>
+            <div class="mesh-spec-item">
+              <span>Advanced Drawer:</span>
+              <strong>8-Channel Faders &amp; Scenarios</strong>
+            </div>
+            <div class="mesh-spec-item">
+              <span>WCAG Standard:</span>
+              <strong>AAA Level (&gt;= 7:1 Contrast)</strong>
+            </div>
+            <div class="mesh-spec-item">
+              <span>Engine Core:</span>
+              <strong>Google Oboe C++ / AAudio</strong>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Why We Built This / Our Promise Section -->
@@ -2011,10 +2359,22 @@
               <td><span class="check-yes">✓ Physical Switch on Mic</span></td>
             </tr>
             <tr>
-              <td><strong>Two-Phone Wireless Relay</strong></td>
-              <td class="col-highlight"><span class="check-yes">✓ Stream Over Local Wi-Fi</span></td>
-              <td><span class="check-no">✕ Not Supported</span></td>
-              <td><span class="check-no">✕ Proprietary Hardware Only</span></td>
+              <td><strong>8-Mic Wireless Stage Hub</strong></td>
+              <td class="col-highlight"><span class="check-yes">✓ Up to 8 Mics Mixed to 1 Speaker</span></td>
+              <td><span class="check-no">✕ Single Phone Only</span></td>
+              <td><span class="check-no">✕ Requires $1,000+ Hardware Desk</span></td>
+            </tr>
+            <tr>
+              <td><strong>Group Walkie-Talkie Mesh</strong></td>
+              <td class="col-highlight"><span class="check-yes">✓ Wi-Fi Multicast (Zero Cloud Lag)</span></td>
+              <td><span class="check-no">✕ Cloud Server Lag / None</span></td>
+              <td><span class="check-partial">⚠ Proprietary Radios Only</span></td>
+            </tr>
+            <tr>
+              <td><strong>Minimalist Clean Interface</strong></td>
+              <td class="col-highlight"><span class="check-yes">✓ 1-Tap Simple Mode + Pro Drawer</span></td>
+              <td><span class="check-no">✕ Popups, Video Ads & Clutter</span></td>
+              <td><span class="check-partial">⚠ Tiny LCD &amp; Confusing Menus</span></td>
             </tr>
             <tr>
               <td><strong>Privacy & Code</strong></td>
@@ -2164,8 +2524,8 @@
             </svg>
           </div>
           <div class="tech-content">
-            <h3>Two-Phone Wi-Fi Relay</h3>
-            <p>Need more range than Bluetooth's 10 meters? Keep one phone plugged into the speaker across the hall, and talk into your personal phone over Wi-Fi.</p>
+            <h3>8-Phone Wi-Fi Hub &amp; Mesh</h3>
+            <p>Need more range than Bluetooth? Mix up to 8 phone mics into 1 speaker, or use instant multicast PTT intercom across your local Wi-Fi without internet or external hardware.</p>
           </div>
         </div>
 
@@ -2204,12 +2564,16 @@
               <td>Google Oboe C++ with AAudio (with Java AudioRecord fallback)</td>
             </tr>
             <tr>
-              <td>Sound Quality</td>
-              <td>48,000 Hz • 16-bit Mono PCM (Zero Latency)</td>
+              <td>Sound Quality &amp; Latency</td>
+              <td>48 kHz Mono PCM16, 10ms frame, 30–60 ms adaptive jitter buffer, -0.5 dBFS limiter</td>
             </tr>
             <tr>
-              <td>Wi-Fi Relay Protocol</td>
-              <td>Local Wi-Fi UDP Streaming + Auto-Discovery</td>
+              <td>Wi-Fi Mesh &amp; Hub Protocol</td>
+              <td>8-Channel UDP Hub &amp; LAN Multicast (239.255.42.99) with Auto-Discovery</td>
+            </tr>
+            <tr>
+              <td>User Interface</td>
+              <td>Clean Minimalist UI (Single Tap-to-Talk) with 1-Tap Pro Drawer</td>
             </tr>
             <tr>
               <td>Accessibility Standard</td>
@@ -2217,7 +2581,7 @@
             </tr>
             <tr>
               <td>Automated Tests</td>
-              <td><span style="color:var(--accent-emerald); font-weight:700;">All 18 Unit Tests Passed • Clean Build</span></td>
+              <td><span style="color:var(--accent-emerald); font-weight:700;">All 24 Unit Tests Passed (MultiChannelMixerTest, SpeechDspTest, etc.) • Clean Build</span></td>
             </tr>
             <tr>
               <td>Source Code</td>
@@ -2565,6 +2929,9 @@
     }
     const phoneBars = phoneVuBarsContainer.querySelectorAll('.mock-vu-bar');
     let isBroadcasting = false;
+    let currentMode = 'toggle'; // 'toggle' | 'ptt'
+    let currentNetRole = 'standalone'; // 'standalone' | 'hub' | 'walkie'
+    let isDrawerOpen = false;
 
     const mockMicBtn = document.getElementById('mockMicBtn');
     const mockMicCircle = document.getElementById('mockMicCircle');
@@ -2572,31 +2939,180 @@
     const mockStatusText = document.getElementById('mockStatusText');
     const mockStatusPill = document.getElementById('mockStatusPill');
     const mockDbText = document.getElementById('mockDbText');
+    const mockDeviceStatus = document.getElementById('mockDeviceStatus');
+    const mockMeterTitle = document.getElementById('mockMeterTitle');
+    const mockMixerSummary = document.getElementById('mockMixerSummary');
+    const mockToggleCard = document.getElementById('mockToggleCard');
+    const mockTogglePill = document.getElementById('mockTogglePill');
+    const mockAdvancedDrawer = document.getElementById('mockAdvancedDrawer');
+    const mockModeToggle = document.getElementById('mockModeToggle');
+    const mockModePtt = document.getElementById('mockModePtt');
 
-    function toggleBroadcast() {
-      isBroadcasting = !isBroadcasting;
-      if (isBroadcasting) {
+    function updateBroadcastUI(live) {
+      if (live) {
         mockMicCircle.classList.add('live');
-        mockMicLabel.textContent = 'MIC ON • TAP TO MUTE';
-        mockMicLabel.style.color = '#C4B5FD';
-        mockStatusText.textContent = 'LIVE';
-        mockStatusPill.style.background = 'rgba(167, 139, 250, 0.2)';
-        mockStatusPill.style.color = 'var(--brand-bright)';
+        if (currentNetRole === 'hub') {
+          mockMicLabel.textContent = currentMode === 'ptt' ? 'MIXING • RELEASE TO PAUSE' : 'MIXING LIVE • TAP TO STOP';
+          mockMicLabel.style.color = '#C4B5FD';
+          mockStatusText.textContent = 'MIXER LIVE';
+          mockStatusPill.style.background = 'rgba(167, 139, 250, 0.2)';
+          mockStatusPill.style.color = 'var(--brand-bright)';
+        } else if (currentNetRole === 'walkie') {
+          mockMicLabel.textContent = currentMode === 'ptt' ? 'TRANSMITTING • RELEASE TO HEAR' : 'TRANSMITTING • TAP TO MUTE';
+          mockMicLabel.style.color = '#38BDF8';
+          mockStatusText.textContent = 'PTT TALKING';
+          mockStatusPill.style.background = 'rgba(56, 189, 248, 0.2)';
+          mockStatusPill.style.color = 'var(--accent-cyan)';
+        } else {
+          mockMicLabel.textContent = currentMode === 'ptt' ? 'SPEAKING • RELEASE TO MUTE' : 'MIC ON • TAP TO MUTE';
+          mockMicLabel.style.color = '#C4B5FD';
+          mockStatusText.textContent = 'LIVE';
+          mockStatusPill.style.background = 'rgba(167, 139, 250, 0.2)';
+          mockStatusPill.style.color = 'var(--brand-bright)';
+        }
       } else {
         mockMicCircle.classList.remove('live');
-        mockMicLabel.textContent = 'TAP TO TALK';
         mockMicLabel.style.color = 'var(--text-muted)';
-        mockStatusText.textContent = 'READY';
         mockStatusPill.style.background = 'rgba(52, 211, 153, 0.15)';
         mockStatusPill.style.color = 'var(--accent-emerald)';
         mockDbText.textContent = '-96 dB';
         phoneBars.forEach(b => { b.style.height = '10%'; b.className = 'mock-vu-bar'; });
+
+        if (currentNetRole === 'hub') {
+          mockMicLabel.textContent = currentMode === 'ptt' ? 'HOLD TO BROADCAST' : 'START 8-MIC MIXER';
+          mockStatusText.textContent = 'HUB READY';
+        } else if (currentNetRole === 'walkie') {
+          mockMicLabel.textContent = currentMode === 'ptt' ? 'HOLD TO TRANSMIT' : 'TAP TO TRANSMIT';
+          mockStatusText.textContent = 'LISTENING · LAN-1';
+        } else {
+          mockMicLabel.textContent = currentMode === 'ptt' ? 'HOLD TO TALK' : 'TAP TO TALK';
+          mockStatusText.textContent = 'READY';
+        }
       }
     }
-    mockMicBtn.addEventListener('click', toggleBroadcast);
-    mockMicBtn.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleBroadcast(); }
+
+    function startBroadcast() {
+      if (isBroadcasting) return;
+      isBroadcasting = true;
+      updateBroadcastUI(true);
+    }
+
+    function stopBroadcast() {
+      if (!isBroadcasting) return;
+      isBroadcasting = false;
+      updateBroadcastUI(false);
+    }
+
+    function toggleBroadcast() {
+      if (isBroadcasting) stopBroadcast();
+      else startBroadcast();
+    }
+
+    // Toggle Advanced Drawer (Clean UI)
+    function toggleAdvancedDrawer() {
+      isDrawerOpen = !isDrawerOpen;
+      if (mockAdvancedDrawer && mockTogglePill && mockToggleCard) {
+        mockAdvancedDrawer.style.display = isDrawerOpen ? 'flex' : 'none';
+        mockTogglePill.textContent = isDrawerOpen ? 'HIDE ▲' : 'SHOW ▼';
+        mockToggleCard.setAttribute('aria-expanded', isDrawerOpen ? 'true' : 'false');
+      }
+    }
+
+    if (mockToggleCard) {
+      mockToggleCard.addEventListener('click', toggleAdvancedDrawer);
+      mockToggleCard.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleAdvancedDrawer();
+        }
+      });
+    }
+
+    // Network Role Switching
+    const netChips = [
+      { el: document.getElementById('chipNetStandalone'), role: 'standalone' },
+      { el: document.getElementById('chipNetHub'), role: 'hub' },
+      { el: document.getElementById('chipNetWalkie'), role: 'walkie' }
+    ];
+
+    function setNetRole(role) {
+      currentNetRole = role;
+      netChips.forEach(c => {
+        if (c.el) {
+          const isActive = (c.role === role);
+          c.el.classList.toggle('active', isActive);
+          c.el.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        }
+      });
+
+      if (role === 'hub') {
+        if (mockDeviceStatus) mockDeviceStatus.textContent = 'Speaker Out • 8-Channel Hub';
+        if (mockMixerSummary) mockMixerSummary.style.display = 'flex';
+        if (mockMeterTitle) mockMeterTitle.textContent = 'MASTER OUT';
+      } else if (role === 'walkie') {
+        if (mockDeviceStatus) mockDeviceStatus.textContent = 'Multicast 239.255.42.99';
+        if (mockMixerSummary) mockMixerSummary.style.display = 'none';
+        if (mockMeterTitle) mockMeterTitle.textContent = 'CHANNEL 1';
+      } else {
+        if (mockDeviceStatus) mockDeviceStatus.textContent = 'Connected • Zero Lag Engine';
+        if (mockMixerSummary) mockMixerSummary.style.display = 'none';
+        if (mockMeterTitle) mockMeterTitle.textContent = 'MIC LEVEL';
+      }
+      updateBroadcastUI(isBroadcasting);
+    }
+
+    netChips.forEach(({ el, role }) => {
+      if (el) {
+        el.addEventListener('click', () => setNetRole(role));
+      }
     });
+
+    // Mode Selector (Toggle vs Push to Talk)
+    if (mockModeToggle && mockModePtt) {
+      mockModeToggle.addEventListener('click', () => {
+        currentMode = 'toggle';
+        mockModeToggle.classList.add('active');
+        mockModePtt.classList.remove('active');
+        updateBroadcastUI(isBroadcasting);
+      });
+      mockModePtt.addEventListener('click', () => {
+        currentMode = 'ptt';
+        mockModePtt.classList.add('active');
+        mockModeToggle.classList.remove('active');
+        updateBroadcastUI(isBroadcasting);
+      });
+    }
+
+    // Mic Button Interaction (Supports both Toggle and PTT Hold)
+    if (mockMicBtn) {
+      mockMicBtn.addEventListener('mousedown', () => {
+        if (currentMode === 'ptt') startBroadcast();
+      });
+      window.addEventListener('mouseup', () => {
+        if (currentMode === 'ptt' && isBroadcasting) stopBroadcast();
+      });
+      mockMicBtn.addEventListener('touchstart', (e) => {
+        if (currentMode === 'ptt') {
+          e.preventDefault();
+          startBroadcast();
+        }
+      }, { passive: false });
+      mockMicBtn.addEventListener('touchend', (e) => {
+        if (currentMode === 'ptt' && isBroadcasting) {
+          e.preventDefault();
+          stopBroadcast();
+        }
+      });
+      mockMicBtn.addEventListener('click', () => {
+        if (currentMode === 'toggle') toggleBroadcast();
+      });
+      mockMicBtn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleBroadcast();
+        }
+      });
+    }
 
     setInterval(() => {
       if (!isBroadcasting) return;
