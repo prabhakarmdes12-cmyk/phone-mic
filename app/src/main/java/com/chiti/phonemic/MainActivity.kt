@@ -292,7 +292,7 @@ fun PhoneMicScreen(
     val isActive = audioState is AudioState.Active
     val buttonColor by animateColorAsState(
         targetValue = when {
-            isPttHolding || isActive -> Color(0xFF9955FF)
+            isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE) -> Color(0xFF9955FF)
             audioState is AudioState.Muted -> Color(0xFF382855)
             else -> Color(0xFF26262C)
         },
@@ -303,7 +303,7 @@ fun PhoneMicScreen(
     // Pulse animation based on live audio RMS level
     val normalizedRms = ((rmsDb + 60.0f) / 60.0f).coerceIn(0.0f, 1.0f)
     val pulseScale by animateFloatAsState(
-        targetValue = if (isActive || isPttHolding) 1.0f + (normalizedRms * 0.15f) else 1.0f,
+        targetValue = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) 1.0f + (normalizedRms * 0.15f) else 1.0f,
         label = "PulseScale"
     )
 
@@ -331,7 +331,13 @@ fun PhoneMicScreen(
                             color = Color.White
                         )
                         Text(
-                            text = if (isActive) "● LIVE BROADCASTING" else "READY • v1.2",
+                            text = when {
+                                networkRole == NetworkRole.WALKIE_TALKIE && meshPttPressed && isActive -> "● TRANSMITTING"
+                                networkRole == NetworkRole.WALKIE_TALKIE && isActive -> "● LISTENING · LAN-1"
+                                networkRole == NetworkRole.RECEIVER_MIXER && isActive -> "● MIXER LIVE"
+                                isActive -> "● LIVE BROADCASTING"
+                                else -> "READY • v1.2"
+                            },
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = if (isActive) Color(0xFF9955FF) else Color(0xFF9DA3AF)
@@ -477,12 +483,12 @@ fun PhoneMicScreen(
                     .padding(4.dp)
             ) {
                 MicOperationMode.ALL.forEach { mode ->
-                    val isSelected = micMode == mode
+                    val isSelected = if (networkRole == NetworkRole.WALKIE_TALKIE) mode == MicOperationMode.PUSH_TO_TALK else micMode == mode
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
                             .background(if (isSelected) Color(0xFF9955FF) else Color.Transparent)
-                            .clickable {
+                            .clickable(enabled = networkRole != NetworkRole.WALKIE_TALKIE) {
                                 if (isActive) {
                                     scope.launch { audioEngine.stop() }
                                 }
@@ -572,7 +578,7 @@ fun PhoneMicScreen(
                         .background(buttonColor)
                         .border(
                             width = 4.dp,
-                            color = if (isActive || isPttHolding) Color(0xFFC499FF) else Color(0xFF383842),
+                            color = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) Color(0xFFC499FF) else Color(0xFF383842),
                             shape = CircleShape
                         )
                         .pointerInput(micMode, hasPermissions, networkRole) {
@@ -629,18 +635,20 @@ fun PhoneMicScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = when {
+                                networkRole == NetworkRole.WALKIE_TALKIE -> if (meshPttPressed) Icons.Default.Mic else Icons.Default.VolumeUp
                                 networkRole == NetworkRole.RECEIVER_MIXER -> if (isActive) Icons.Default.VolumeUp else Icons.Default.VolumeOff
-                                isActive || isPttHolding -> Icons.Default.Mic
+                                isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE) -> Icons.Default.Mic
                                 else -> Icons.Default.MicOff
                             },
                             contentDescription = if (networkRole == NetworkRole.RECEIVER_MIXER) "Speaker Station Toggle" else "Microphone Toggle",
-                            tint = if (isActive || isPttHolding) Color(0xFF090A0B) else Color.White,
+                            tint = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) Color(0xFF090A0B) else Color.White,
                             modifier = Modifier.size(64.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = when {
-                                networkRole == NetworkRole.WALKIE_TALKIE -> if (meshPttPressed) "TRANSMITTING • RELEASE" else "HOLD TO TALK"
+                                networkRole == NetworkRole.WALKIE_TALKIE && audioState == AudioState.Connecting -> "JOINING LAN-1"
+                                networkRole == NetworkRole.WALKIE_TALKIE -> if (meshPttPressed && isActive) "TRANSMITTING • RELEASE" else "HOLD TO TALK"
                                 networkRole == NetworkRole.RECEIVER_MIXER && isActive -> "STATION PLAYING • STOP"
                                 networkRole == NetworkRole.RECEIVER_MIXER && audioState == AudioState.Connecting -> "CONNECTING"
                                 networkRole == NetworkRole.RECEIVER_MIXER -> "START SPEAKER STATION"
@@ -653,7 +661,7 @@ fun PhoneMicScreen(
                             },
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isActive || isPttHolding) Color(0xFF090A0B) else Color.White
+                            color = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) Color(0xFF090A0B) else Color.White
                         )
                     }
                 }
@@ -690,7 +698,7 @@ fun PhoneMicScreen(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = if (isActive || isPttHolding) "${rmsDb.toInt()} dBFS" else "MIC ON STANDBY",
+                    text = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) "${rmsDb.toInt()} dBFS" else "MIC ON STANDBY",
                     fontSize = 11.sp,
                     color = Color(0xFF9DA3AF)
                 )

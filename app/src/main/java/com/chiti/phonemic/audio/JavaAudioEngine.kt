@@ -83,6 +83,7 @@ class JavaAudioEngine(private val context: Context,
                                 samples.fill(0); 480
                             }
                         }
+                        if (role == NetworkRole.WALKIE_TALKIE && network?.transmitting == true) samples.fill(0)
                         if (n <= 0) { if (running) error("Audio capture failed: $n"); break }
                         if ((role == NetworkRole.RECEIVER_MIXER || role == NetworkRole.WALKIE_TALKIE)) {
                             // Received PCM is already processed; only mix station chimes + master limiter.

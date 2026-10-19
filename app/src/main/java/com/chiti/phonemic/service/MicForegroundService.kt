@@ -62,6 +62,11 @@ class MicForegroundService : Service() {
         super.onCreate()
         createNotificationChannel()
         scope.launch {
+            session.pttPressed.collectLatest {
+                if (session.audioState.value is AudioState.Active) updateNotification()
+            }
+        }
+        scope.launch {
             session.audioState.collectLatest { state ->
                 isMuted = state is AudioState.Muted
                 if (state is AudioState.Active || state is AudioState.Muted) updateNotification()
@@ -153,9 +158,14 @@ class MicForegroundService : Service() {
         )
 
         val isReceiver = session.role.value == NetworkRole.RECEIVER_MIXER || session.role.value == NetworkRole.WALKIE_TALKIE
-        val title = if (isReceiver) "PhoneMic Speaker Station 🔊" else "PhoneMic is Live 🎙️"
+        val title = when {
+            session.role.value == NetworkRole.WALKIE_TALKIE -> "PhoneMic Walkie-Talkie · LAN-1"
+            isReceiver -> "PhoneMic Speaker Hub 🔊"
+            else -> "PhoneMic is Live 🎙️"
+        }
         val statusText = when {
             isMuted -> "MUTED — Tap to resume"
+            session.role.value == NetworkRole.WALKIE_TALKIE -> if (session.pttPressed.value) "TRANSMITTING — Release PTT to listen" else "LISTENING — Hold PTT in the app to speak"
             isReceiver -> "PLAYING — Receiving wireless audio"
             else -> "LIVE — Broadcasting to $deviceName"
         }

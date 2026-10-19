@@ -88,6 +88,22 @@ class MultiChannelMixerTest {
         assertEquals(1234567890123L, AudioPacketCodec.longAt(bytes, 4))
         AudioPacketCodec.decode(bytes, output); assertArrayEquals(input, output)
     }
+    @Test fun newPttBurstResetsOnlyJitterAndPreservesChannelControls() {
+        val mixer = MultiChannelMixer(); val channel = add(mixer, 0, 1000)
+        channel.beginSession(1, 0)
+        channel.jitterBuffer.offer(20, ShortArray(480) { 1000 }, 0)
+        val output = ShortArray(480)
+        channel.jitterBuffer.poll(output, 30_000_000)
+        channel.jitterBuffer.poll(output, 40_000_000)
+        channel.gain = .5f; channel.isMuted = true
+        channel.beginSession(2, 100_000_000)
+        assertTrue(channel.jitterBuffer.offer(0, ShortArray(480) { 2000 }, 100_000_000))
+        // Repeated HELLO for the same burst must not discard packets already buffered.
+        channel.beginSession(2, 110_000_000)
+        assertTrue(channel.jitterBuffer.poll(output, 130_000_000))
+        assertEquals(2000, output[0].toInt())
+        assertEquals(.5f, channel.gain, 0f); assertTrue(channel.isMuted)
+    }
     @Test fun sequenceWrapPerPeerWorks() {
         val mixer = MultiChannelMixer(); val a = add(mixer, 1, 1000, Int.MAX_VALUE)
         a.jitterBuffer.offer(Int.MIN_VALUE, ShortArray(480) { 2000 }, 1)

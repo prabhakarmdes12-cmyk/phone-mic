@@ -150,7 +150,7 @@ class UdpAudioStreamer(private val context: Context? = null) {
                                             channel.deviceName = AudioPacketCodec.deviceName(receive.data)
                                             if (receive.length == AudioPacketCodec.HELLO_SIZE) {
                                                 val token = AudioPacketCodec.intAt(receive.data, 68)
-                                                if (channel.sessionToken != token) { channel.jitterBuffer.reset(); channel.sessionToken = token; channel.lastPacketTimeNs = now }
+                                                channel.beginSession(token, now)
                                             }
                                         }
                                     }

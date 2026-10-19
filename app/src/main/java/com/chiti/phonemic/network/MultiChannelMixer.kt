@@ -24,6 +24,11 @@ class ChannelSession {
     fun reset() {
         sessionToken = null; jitterBuffer.reset(); gain = 1f; smoothGain = 1f; isMuted = false; rmsDb = -96f
     }
+    fun beginSession(token: Int, now: Long) {
+        if (sessionToken != token) {
+            jitterBuffer.reset(); sessionToken = token; lastPacketTimeNs = now
+        }
+    }
     fun mixInto(bus: FloatArray, now: Long) {
         if (!jitterBuffer.poll(frame, now)) { rmsDb = -96f; return }
         var energy = 0f
