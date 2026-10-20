@@ -272,15 +272,18 @@ class AudioSessionManager private constructor(private val context: Context) : Au
             candidate?.setBgmTrack(selectedBgmTrack.value)
             candidate?.setBgmVolume(selectedBgmVolume.value)
             candidate?.setAutoDucking(selectedAutoDucking.value)
-            if (candidate != null && !candidate.start(deviceName, gain)) {
-                runCatching { candidate.stop() }
+            val currentCandidate = candidate
+            if (currentCandidate != null && !currentCandidate.start(deviceName, gain)) {
+                runCatching { currentCandidate.stop() }
                 candidate = null
             }
         } catch (_: LinkageError) {
-            runCatching { candidate?.stop() }
+            val failedCandidate = candidate
+            runCatching { failedCandidate?.stop() }
             candidate = null
         } catch (_: Exception) {
-            runCatching { candidate?.stop() }
+            val failedCandidate = candidate
+            runCatching { failedCandidate?.stop() }
             candidate = null
         }
         if (candidate == null) {
@@ -290,12 +293,12 @@ class AudioSessionManager private constructor(private val context: Context) : Au
             javaEng.soundboard.setBgmTrack(selectedBgmTrack.value)
             javaEng.soundboard.setBgmVolume(selectedBgmVolume.value)
             javaEng.setAutoDucking(selectedAutoDucking.value)
-            candidate = javaEng
-            if (!candidate.start(deviceName, gain)) {
-                runCatching { candidate.stop() }
+            if (!javaEng.start(deviceName, gain)) {
+                runCatching { javaEng.stop() }
                 closeEngine()
                 state.value = AudioState.Error("Neither audio engine could start"); return false
             }
+            candidate = javaEng
         }
         engine = candidate
         state.value = AudioState.Active(deviceName, 0, gain, preset)
