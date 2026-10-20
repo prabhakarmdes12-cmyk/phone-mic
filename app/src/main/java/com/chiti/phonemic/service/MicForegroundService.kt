@@ -84,7 +84,17 @@ class MicForegroundService : Service() {
                     return START_NOT_STICKY
                 }
                 acquireWakeLock()
-                scope.launch { if (!session.startFromService()) stopSelf() }
+                scope.launch {
+                    runCatching {
+                        if (!session.startFromService()) {
+                            stopSelf()
+                        }
+                    }.onFailure { e ->
+                        android.util.Log.e("MicForegroundService", "startFromService failed with exception", e)
+                        session.serviceStartFailed(e.message ?: "Audio service initialization failed")
+                        stopSelf()
+                    }
+                }
             }
             ACTION_STOP -> {
                 stopSelf()
@@ -106,9 +116,17 @@ class MicForegroundService : Service() {
     }
 
     private fun startForegroundWithNotification(): Boolean {
-        return runCatching {
-            val notification = buildNotification()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val notification = runCatching { buildNotification() }.getOrElse {
+            NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("PhoneMic")
+                .setContentText("Microphone audio service active")
+                .setSmallIcon(R.drawable.ic_microphone)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .build()
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val typedResult = runCatching {
                 val type = when (session.role.value) {
                     NetworkRole.RECEIVER_MIXER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
                     NetworkRole.TRANSMITTER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
@@ -121,12 +139,36 @@ class MicForegroundService : Service() {
                     }
                 }
                 startForeground(NOTIFICATION_ID, notification, type)
-            } else {
-                startForeground(NOTIFICATION_ID, notification)
+                true
+            }.onFailure { e ->
+                android.util.Log.w("MicForegroundService", "Typed startForeground failed, attempting fallback", e)
+            }.getOrDefault(false)
+
+            if (typedResult) return true
+
+            if (Build.VERSION.SDK_INT >= 34) {
+                val singleTypeResult = runCatching {
+                    val fallbackType = if (session.role.value == NetworkRole.RECEIVER_MIXER) {
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                    } else {
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                    }
+                    startForeground(NOTIFICATION_ID, notification, fallbackType)
+                    true
+                }.onFailure { e ->
+                    android.util.Log.w("MicForegroundService", "Single-type startForeground failed, attempting untyped", e)
+                }.getOrDefault(false)
+
+                if (singleTypeResult) return true
             }
+        }
+
+        return runCatching {
+            startForeground(NOTIFICATION_ID, notification)
+            true
         }.onFailure { e ->
-            android.util.Log.e("MicForegroundService", "Failed to startForeground notification", e)
-        }.isSuccess
+            android.util.Log.e("MicForegroundService", "All startForeground attempts failed", e)
+        }.getOrDefault(false)
     }
 
     private fun updateNotification() {

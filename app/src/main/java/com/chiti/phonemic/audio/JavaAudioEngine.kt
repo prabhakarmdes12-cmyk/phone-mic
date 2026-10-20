@@ -129,9 +129,8 @@ class JavaAudioEngine(private val context: Context,
         worker?.let { java.util.concurrent.locks.LockSupport.unpark(it) }
         worker?.join()
         if (role == NetworkRole.WALKIE_TALKIE) network?.playbackThread = null
-        worker = null
-        record?.release(); record = null
-        track?.release(); track = null
+        runCatching { record?.release() }; record = null
+        runCatching { track?.release() }; track = null
         meter?.cancel(); meter = null
         rms.value = -96f; peak.value = -96f
         state.value = AudioState.Idle

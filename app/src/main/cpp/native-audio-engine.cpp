@@ -160,10 +160,12 @@ void NativeAudioEngine::stop() {
 }
 
 bool NativeAudioEngine::openStreams() {
+    closeStreams();
+
     oboe::AudioStreamBuilder inBuilder;
     inBuilder.setDirection(oboe::Direction::Input)
              ->setPerformanceMode(oboe::PerformanceMode::LowLatency)
-             ->setSharingMode(oboe::SharingMode::Exclusive)
+             ->setSharingMode(oboe::SharingMode::Shared)
              ->setFormat(oboe::AudioFormat::Float)
              ->setChannelCount(oboe::ChannelCount::Mono)
              ->setSampleRate(48000)
@@ -174,6 +176,7 @@ bool NativeAudioEngine::openStreams() {
     oboe::Result res = inBuilder.openStream(inputStream_);
     if (res != oboe::Result::OK) {
         LOGE("Failed to open input stream: %s", oboe::convertToText(res));
+        closeStreams();
         return false;
     }
 
@@ -194,24 +197,54 @@ bool NativeAudioEngine::openStreams() {
     res = outBuilder.openStream(outputStream_);
     if (res != oboe::Result::OK) {
         LOGE("Failed to open output stream: %s", oboe::convertToText(res));
-        inputStream_->close();
+        closeStreams();
         return false;
     }
 
-    if (inputStream_->requestStart() != oboe::Result::OK) return false;
-    if (outputStream_->requestStart() != oboe::Result::OK) return false;
+    res = inputStream_->requestStart();
+    if (res != oboe::Result::OK) {
+        LOGE("Failed to start input stream: %s", oboe::convertToText(res));
+        closeStreams();
+        return false;
+    }
+
+    res = outputStream_->requestStart();
+    if (res != oboe::Result::OK) {
+        LOGE("Failed to start output stream: %s", oboe::convertToText(res));
+        closeStreams();
+        return false;
+    }
+
     return true;
 }
 
 void NativeAudioEngine::closeStreams() {
     if (inputStream_) {
-        inputStream_->stop();
-        inputStream_->close();
+        try {
+            auto state = inputStream_->getState();
+            if (state == oboe::StreamState::Started || state == oboe::StreamState::Starting) {
+                inputStream_->stop();
+            }
+            if (state != oboe::StreamState::Closed && state != oboe::StreamState::Closing && state != oboe::StreamState::Uninitialized) {
+                inputStream_->close();
+            }
+        } catch (...) {
+            LOGW("Exception while closing input stream");
+        }
         inputStream_.reset();
     }
     if (outputStream_) {
-        outputStream_->stop();
-        outputStream_->close();
+        try {
+            auto state = outputStream_->getState();
+            if (state == oboe::StreamState::Started || state == oboe::StreamState::Starting) {
+                outputStream_->stop();
+            }
+            if (state != oboe::StreamState::Closed && state != oboe::StreamState::Closing && state != oboe::StreamState::Uninitialized) {
+                outputStream_->close();
+            }
+        } catch (...) {
+            LOGW("Exception while closing output stream");
+        }
         outputStream_.reset();
     }
     std::fill(std::begin(delayBuffer_), std::end(delayBuffer_), 0.0f);
@@ -497,6 +530,9 @@ void NativeAudioEngine::processDsp(float* buffer, int32_t numFrames) {
     float rms = sqrtf(sumSq / static_cast<float>(numFrames));
     float rmsDb = (rms > 1e-5f) ? (20.0f * log10f(rms)) : -96.0f;
     float peakDb = (peak > 1e-5f) ? (20.0f * log10f(peak)) : -96.0f;
+
+    if (std::isnan(rmsDb) || std::isinf(rmsDb)) rmsDb = -96.0f;
+    if (std::isnan(peakDb) || std::isinf(peakDb)) peakDb = -96.0f;
 
     currentRmsDb_.store(rmsDb, std::memory_order_relaxed);
     currentPeakDb_.store(peakDb, std::memory_order_relaxed);

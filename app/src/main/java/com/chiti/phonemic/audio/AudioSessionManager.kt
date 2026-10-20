@@ -242,7 +242,7 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         return try { MicForegroundService.start(context, deviceName); true }
         catch (e: Exception) { state.value = AudioState.Error("Cannot start microphone service", e); false }
     }
-    suspend fun startFromService(): Boolean {
+    suspend fun startFromService(): Boolean = runCatching {
         if (state.value != AudioState.Connecting) return state.value is AudioState.Active
         if (audioManager.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
             state.value = AudioState.Error("Audio focus is unavailable"); return false
@@ -272,9 +272,17 @@ class AudioSessionManager private constructor(private val context: Context) : Au
             candidate?.setBgmTrack(selectedBgmTrack.value)
             candidate?.setBgmVolume(selectedBgmVolume.value)
             candidate?.setAutoDucking(selectedAutoDucking.value)
-            if (candidate != null && !candidate.start(deviceName, gain)) { candidate.stop(); candidate = null }
-        } catch (_: LinkageError) { candidate?.stop(); candidate = null }
-          catch (_: Exception) { candidate?.stop(); candidate = null }
+            if (candidate != null && !candidate.start(deviceName, gain)) {
+                runCatching { candidate.stop() }
+                candidate = null
+            }
+        } catch (_: LinkageError) {
+            runCatching { candidate?.stop() }
+            candidate = null
+        } catch (_: Exception) {
+            runCatching { candidate?.stop() }
+            candidate = null
+        }
         if (candidate == null) {
             val javaEng = JavaAudioEngine(context, selectedRole.value, network, recorder)
             javaEng.setVoicePreset(preset)
@@ -284,7 +292,8 @@ class AudioSessionManager private constructor(private val context: Context) : Au
             javaEng.setAutoDucking(selectedAutoDucking.value)
             candidate = javaEng
             if (!candidate.start(deviceName, gain)) {
-                candidate.stop(); closeEngine()
+                runCatching { candidate.stop() }
+                closeEngine()
                 state.value = AudioState.Error("Neither audio engine could start"); return false
             }
         }
@@ -302,8 +311,10 @@ class AudioSessionManager private constructor(private val context: Context) : Au
                 if (network?.failed == true) {
                     setMuted(true, MuteReason.NETWORK_DISCONNECTED); break
                 }
-                rms.value = pttCapture?.currentRmsDb?.value ?: active.currentRmsDb.value
-                peak.value = pttCapture?.currentPeakDb?.value ?: active.currentPeakDb.value
+                val rawRms = pttCapture?.currentRmsDb?.value ?: active.currentRmsDb.value
+                val rawPeak = pttCapture?.currentPeakDb?.value ?: active.currentPeakDb.value
+                rms.value = if (rawRms.isNaN() || rawRms.isInfinite()) -96.0f else rawRms
+                peak.value = if (rawPeak.isNaN() || rawPeak.isInfinite()) -96.0f else rawPeak
                 if (pttCapture?.audioState?.value is AudioState.Error) setPttPressed(false)
                 feedback.value = active.isFeedbackActive.value
                 if (active.audioState.value is AudioState.Error) {
@@ -312,20 +323,24 @@ class AudioSessionManager private constructor(private val context: Context) : Au
                 delay(33)
             }
         }
-        return true
-    }
+        true
+    }.onFailure { e ->
+        closeEngine()
+        state.value = AudioState.Error(e.message ?: "Audio startup failed", e)
+    }.getOrDefault(false)
+
     private fun closeEngine() {
         meters?.cancel(); meters = null
         pressed.value = false
         network?.transmitting = false
-        pttCapture?.stop(); pttCapture = null
-        engine?.stop(); engine = null
+        runCatching { pttCapture?.stop() }; pttCapture = null
+        runCatching { engine?.stop() }; engine = null
         channelList.value = emptyList()
-        recorder.stop()
+        runCatching { recorder.stop() }
         stopPlayback()
-        network?.stop(); network = null
-        if (selectedRole.value == NetworkRole.RECEIVER_MIXER) discovery.stop()
-        audioManager.abandonAudioFocusRequest(focus)
+        runCatching { network?.stop() }; network = null
+        if (selectedRole.value == NetworkRole.RECEIVER_MIXER) runCatching { discovery.stop() }
+        runCatching { audioManager.abandonAudioFocusRequest(focus) }
         rms.value = -96f; peak.value = -96f
         feedback.value = false
     }

@@ -301,7 +301,8 @@ fun PhoneMicScreen(
     )
 
     // Pulse animation based on live audio RMS level
-    val normalizedRms = ((rmsDb + 60.0f) / 60.0f).coerceIn(0.0f, 1.0f)
+    val safeRms = if (rmsDb.isNaN() || rmsDb.isInfinite()) -96.0f else rmsDb
+    val normalizedRms = ((safeRms + 60.0f) / 60.0f).coerceIn(0.0f, 1.0f)
     val pulseScale by animateFloatAsState(
         targetValue = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) 1.0f + (normalizedRms * 0.15f) else 1.0f,
         label = "PulseScale"
@@ -698,7 +699,7 @@ fun PhoneMicScreen(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) "${rmsDb.toInt()} dBFS" else "MIC ON STANDBY",
+                    text = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) "${safeRms.toInt()} dBFS" else "MIC ON STANDBY",
                     fontSize = 11.sp,
                     color = Color(0xFF9DA3AF)
                 )

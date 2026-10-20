@@ -67,12 +67,16 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
     override fun stop() {
         meterJob?.cancel()
         meterJob = null
-        nativeStop(nativeHandle)
-        if (nativeHandle != 0L) {
+        val handle = nativeHandle
+        if (handle != 0L) {
+            runCatching { nativeStop(handle) }
             val tail = ShortArray(2048)
-            repeat(32) { val n = nativeReadProcessed(nativeHandle, tail); if (n > 0) recorder?.offer(tail, n) }
+            repeat(32) {
+                val n = runCatching { nativeReadProcessed(handle, tail) }.getOrDefault(0)
+                if (n > 0) recorder?.offer(tail, n)
+            }
+            runCatching { nativeDestroy(handle) }
         }
-        if (nativeHandle != 0L) nativeDestroy(nativeHandle)
         nativeHandle = 0L
         _audioState.value = AudioState.Idle
         _currentRmsDb.value = -96.0f
@@ -145,19 +149,25 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
         val pcm = ShortArray(2048)
         meterJob = scope.launch {
             while (isActive && _audioState.value is AudioState.Active) {
-                _currentRmsDb.value = nativeGetRmsDb(nativeHandle)
-                _currentPeakDb.value = nativeGetPeakDb(nativeHandle)
-                _isFeedbackActive.value = nativeIsFeedbackActive(nativeHandle)
-                val n = nativeReadProcessed(nativeHandle, pcm)
-                if (n > 0) recorder?.offer(pcm, n)
+                val handle = nativeHandle
+                if (handle != 0L) {
+                    val rawRms = runCatching { nativeGetRmsDb(handle) }.getOrDefault(-96.0f)
+                    val rawPeak = runCatching { nativeGetPeakDb(handle) }.getOrDefault(-96.0f)
+                    _currentRmsDb.value = if (rawRms.isNaN() || rawRms.isInfinite()) -96.0f else rawRms
+                    _currentPeakDb.value = if (rawPeak.isNaN() || rawPeak.isInfinite()) -96.0f else rawPeak
+                    _isFeedbackActive.value = runCatching { nativeIsFeedbackActive(handle) }.getOrDefault(false)
+                    val n = runCatching { nativeReadProcessed(handle, pcm) }.getOrDefault(0)
+                    if (n > 0) recorder?.offer(pcm, n)
+                }
                 delay(15) // Drain processed audio off native callback and refresh metering
             }
         }
     }
 
     protected fun finalize() {
-        if (nativeHandle != 0L) {
-            nativeDestroy(nativeHandle)
+        val handle = nativeHandle
+        if (handle != 0L) {
+            runCatching { nativeDestroy(handle) }
             nativeHandle = 0L
         }
     }
