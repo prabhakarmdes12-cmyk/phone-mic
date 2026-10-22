@@ -144,3 +144,33 @@ $$\text{RMS}_{\text{dBFS}} = 20 \log_{10} \left( \sqrt{\frac{1}{N} \sum_{i=1}^{N
 $$\text{Peak}_{\text{dBFS}} = 20 \log_{10} \left( \max_{i=1 \dots N} |x_i| \right)$$
 
 Values are emitted to the Kotlin UI layer at $30\text{ Hz}$ or $60\text{ Hz}$ via atomic float fields without blocking the audio thread.
+
+---
+
+## 5. Smart Vocal Auto-Ducking DSP
+
+When continuous background music (BGM) or backing tracks are playing alongside live speech, the vocal auto-ducking processor dynamically attenuates music volume to maintain speech intelligibility:
+- **Speech Energy Detector:** Monitored on the high-pass filtered vocal input:
+  $$\text{IsSpeaking} = |x_{\text{voice}}[n]| > 0.025 \quad (\approx -32\text{ dBFS})$$
+- **Target Attenuation:** $-14\text{ dB}$ ($G_{\text{duck}} \approx 0.20$) when speech is detected; $0\text{ dB}$ ($1.0$) during silence.
+- **Attack Envelope:** Rapid exponential smoothing with coefficient $\alpha_{\text{attack}} = 0.003$ ($\approx 35\text{ ms}$) on speech onset.
+- **Release Envelope:** Gentle exponential swell with coefficient $\alpha_{\text{release}} = 0.0003$ ($\approx 650\text{ ms}$) during pauses.
+- **Execution:** Zero heap allocation, lock-free, evaluated directly in the audio rendering loop before final peak limiting.
+
+---
+
+## 6. Multi-Channel Summing Mixer (Up to 8 Microphones)
+
+On the Receiver Speaker Station (`NetworkRole.RECEIVER_MIXER`), incoming UDP PCM streams from up to 8 client microphones are summed and mixed in real-time:
+- **Per-Channel Jitter Buffering:** Each active stream owns an independent adaptive jitter buffer (30ms – 60ms) preventing packet reordering or jitter starvation in one stream from stalling the others.
+- **Per-Channel Controls:** Independent linear gain trim ($0.0$ to $2.0$, i.e. $0\%$ to $200\%$) and individual mute flags.
+- **Summing Bus & Soft Knee:** Audio samples are accumulated into a 32-bit floating-point master bus at 10ms intervals.
+- **Master Broadcast Limiter:** A unity-gain region below $0.70$ amplitude and a $\tanh$ soft saturation knee strictly bound output amplitude to **$0.944$ ($-0.5\text{ dBFS}$)**. This eliminates integer overflow wrap-around distortion when multiple participants speak simultaneously.
+
+---
+
+## 7. Hardware ADC Format & Native Sample Rate Compatibility
+
+- **Native Sample Rate:** The input stream builder omits fixed sample rate constraints and resamplers, allowing the microphone hardware to initialize at its native clock (e.g. 48,000 Hz, 44,100 Hz, or 16,000 Hz). The output playback stream is then matched to the native input rate, avoiding Android AAudio MMAP resampler crashes.
+- **ADC Bit-Depth Fallback:** The engine requests `AudioFormat::Float` first. If rejected by the device HAL, it gracefully falls back to 16-bit signed PCM (`AudioFormat::I16`). In `onAudioReady()`, 16-bit integer samples are normalized to 32-bit float in-place via:
+  $$y[n] = \frac{x_{\text{int16}}[n]}{32768.0f}$$

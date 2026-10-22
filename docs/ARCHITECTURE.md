@@ -55,18 +55,20 @@ PhoneMic is structured into four distinct, loosely coupled layers:
 
 ### 2.1 Native Audio Engine (`app/src/main/cpp/`)
 Built with modern C++20 and Google Oboe:
-- **`AudioEngine` Class:** Coordinates full-duplex or synchronized duplex capture and playback streams.
-- **Audio Stream Configuration:**
-  - `Direction::Input` configured with `AudioSource::VoiceCommunication` (for AEC) or `AudioSource::Unprocessed` (for clean DSP), `PerformanceMode::LowLatency`, `SharingMode::Exclusive`.
-  - `Direction::Output` configured with `PerformanceMode::LowLatency`.
-  - Native sample rate automatically negotiated using `oboe::DefaultStreamValues::SampleRate` to avoid Android internal resampler latency overhead.
+- **`AudioEngine` Class:** Coordinates full-duplex capture and playback streams with an integrated DSP pipeline.
+- **Audio Stream Configuration & Hardware Compatibility:**
+  - `Direction::Input` configured with `PerformanceMode::LowLatency` and `SharingMode::Shared` to ensure compatibility across all Android OEM audio HALs without failing exclusive reservations.
+  - Native sample rate automatically negotiated using the hardware rate (`inputStream_->getSampleRate()`) and mapped to output to eliminate OS resampler latency and crashes.
+  - Supports `AudioFormat::Float` with automatic fallback to 16-bit integer PCM (`AudioFormat::I16`) for physical microphone ADCs that reject float input. Real-time conversion to float occurs in `onAudioReady`.
 - **Lock-Free Ring Buffer:** Implemented as a Single-Producer Single-Consumer (SPSC) ring buffer with cache-line-padded atomic indices (`std::atomic<size_t>`). Eliminates mutex locks on the audio thread.
+- **Synthesizer & Ducking:** Integrated continuous background music generator and real-time vocal auto-ducking DSP (-14 dB attenuation during speech).
 
 ### 2.2 Audio Session Manager (`com.chiti.phonemic.audio.AudioSessionManager`)
 The central Kotlin state coordinator:
 - Manages the active `AudioState` (`IDLE`, `CONNECTING`, `ACTIVE`, `MUTED`, `ERROR`).
+- Manages dual-engine fallback: primary native Oboe C++ engine (`NativeAudioEngine`) with automated fallback to `JavaAudioEngine` (AudioRecord/AudioTrack) supporting `VOICE_COMMUNICATION` and `MIC` sources.
 - Requests and manages `AudioFocusRequest` with `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` or `AUDIOFOCUS_GAIN`.
-- Interfaces with the JNI bridge to set real-time parameters (Gain, Preset, Filter cuts).
+- Interfaces with the JNI bridge to set real-time parameters (Gain, Preset, Auto-Ducking, Filter cuts).
 
 ### 2.3 Bluetooth & Device Router (`com.chiti.phonemic.bluetooth.BluetoothAudioRouter`)
 - Monitors device attachments and detachments via `AudioDeviceCallback`.
@@ -79,9 +81,19 @@ The central Kotlin state coordinator:
 
 ### 2.4 Foreground Service (`com.chiti.phonemic.service.MicForegroundService`)
 Enables uninterrupted audio streaming when the screen turns off or the user switches applications:
-- Declared with Android 14+ `android:foregroundServiceType="microphone"`.
-- Displays a persistent status notification with live microphone indicators and an instantaneous hardware **[MUTE]** toggle.
+- **Android 14+ FGS Contract:** Invokes `startForeground()` synchronously within `onStartCommand()` to fulfill the OS contract and prevent `ForegroundServiceDidNotStartInTimeException`.
+- **Role-Based FGS Type Dispatch:**
+  - `RECEIVER_MIXER`: `ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK`.
+  - `STANDALONE`, `TRANSMITTER`, `WALKIE_TALKIE`: `ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE`.
+- **System Notification Safety:** Uses standard Android platform drawables (`android.R.drawable.ic_btn_speak_now`, `ic_media_pause`, `ic_menu_close_clear_cancel`) guaranteeing immunity from SystemUI `BadForegroundServiceNotificationException` crashes.
 - Automatically handles device sleep transitions using a lightweight CPU partial wake lock (`PowerManager.PARTIAL_WAKE_LOCK`).
+
+### 2.5 Multi-Device Network Streaming Engine (`com.chiti.phonemic.network.*`)
+Enables distributed multi-phone microphone amplification and walkie-talkie mesh:
+- **`UdpAudioStreamer`:** Transmits and receives 480-sample (10ms) PCM16 audio datagrams over local Wi-Fi.
+- **`MultiChannelMixer`:** Preallocated 8-channel summing mixer on the Receiver Hub. Demultiplexes up to 8 concurrent wireless microphones by IP/Port with individual jitter buffers, gain trim (0-200%), and per-channel mute, bounded by a soft-knee limiter at `-0.5 dBFS`.
+- **`AudioServiceDiscovery`:** mDNS (Android NSD) zero-configuration service advertiser and discoverer for instant transmitter-to-hub pairing.
+- **Walkie-Talkie Mesh (LAN-1):** Multicast UDP (`239.255.42.99:50005`) peer-to-peer walkie-talkie with `WifiManager.MulticastLock` and hardware volume key PTT.
 
 ---
 
@@ -170,4 +182,8 @@ Hardware Mic  ───────►  DMA Interrupt / Kernel Driver
 | `BLUETOOTH_CONNECT` | `>= 12` (API 31+) | Identify and route audio to connected Bluetooth devices. |
 | `FOREGROUND_SERVICE` | `>= 9` (API 28+) | Maintain audio capture in background. |
 | `FOREGROUND_SERVICE_MICROPHONE` | `>= 14` (API 34+) | System compliance for microphone foreground service. |
+| `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | `>= 14` (API 34+) | System compliance for Speaker Hub receiver station. |
+| `ACCESS_WIFI_STATE` & `ACCESS_NETWORK_STATE` | All | Discover local Wi-Fi IP and subnet interface. |
+| `CHANGE_WIFI_MULTICAST_STATE` | All | Acquire MulticastLock for LAN-1 walkie-talkie mesh. |
+| `POST_NOTIFICATIONS` | `>= 13` (API 33+) | Post persistent live audio broadcasting controls. |
 | `WAKE_LOCK` | All | Prevent CPU sleep during active broadcasting sessions. |

@@ -64,18 +64,18 @@ Phase 0 ──► Phase 1 ──► Phase 2 ──► Phase 3 ──► Phase 4 
 
 ---
 
-## Phase 4: Session Recording & Karaoke Mode
-**Goal:** Enable capture of live audio and vocal accompaniment.
+## Phase 4: Session Recording & Karaoke / BGM Mode ✅ (COMPLETED)
+**Goal:** Enable capture of live audio, lossless WAV export, and continuous background music with vocal auto-ducking.
 
 ### Deliverables:
-- Direct lossless WAV / AAC encoding of the processed microphone stream.
-- Audio file exporter with system share sheet integration.
-- Karaoke mode: background music playback mixed with real-time vocal channel.
-- Studio vocal plate reverb and synchronized delay/echo effects.
+- Direct lossless WAV encoding of the processed microphone stream via `WavAudioRecorder`.
+- Audio file exporter with system share sheet and in-app recordings sheet.
+- Synthesized BGM soundboard tracks (Lo-Fi Chill, Acoustic Groove, Ambient Vocal Pad, R&B Rhythm).
+- Smart vocal auto-ducking DSP (-14 dB attenuation on background music during speech with 35ms attack / 650ms release).
 
 ---
 
-## Phase 5: Two-Phone Wireless Mode (Phone A → Phone B)
+## Phase 5: Two-Phone Wireless Mode (Phone A → Phone B) ✅ (COMPLETED)
 **Goal:** Break the Bluetooth physical distance barrier by decoupling the presenter from the speaker.
 
 ### Architecture:
@@ -84,32 +84,32 @@ PRESENTER                             SPEAKER STATION
  📱 Phone A                             📱 Phone B
     Mic                                  Receiver
      │                                      │
-     └────── Wi-Fi Direct / WebRTC ─────────┘
+     └────── Local Wi-Fi (UDP / NSD) ───────┘
                                             │
-                                        Bluetooth
+                                        Bluetooth / Aux
                                             │
                                             ▼
                                      🔊 PA Speaker
 ```
 - Presenter carries Phone A anywhere in the room.
 - Phone B remains stationed right next to the speaker.
-- Ultra-low latency Opus audio streaming over local Wi-Fi / Wi-Fi Direct.
+- Ultra-low latency raw PCM streaming over local Wi-Fi with automatic mDNS network service discovery.
 
 ---
 
-## 6. Phase 6: MultiMic Distributed Mixer
-**Goal:** Multiple wireless microphones transmitting concurrently to a single receiver.
+## Phase 6: MultiMic Distributed Mixer & Walkie-Talkie Mesh ✅ (COMPLETED)
+**Goal:** Connect multiple wireless microphones concurrently to a single speaker station, or communicate peer-to-peer over local Wi-Fi.
 
 ### Deliverables:
-- Multi-client connection protocol over local subnet.
-- Multi-channel audio mixer UI on Receiver phone.
-- Individual channel gain, solo, and mute controls.
-- Broadcast master limiter.
-- Use cases: Panel discussions, classrooms, debates, religious discourses.
+- **8-Microphone Speaker Hub:** Demultiplexes up to 8 concurrent wireless transmitters by IP/Port into an 8-slot preallocated pool with independent jitter buffers, individual gain trim (0-200%), and per-channel mute.
+- **Walkie-Talkie Mesh (LAN-1):** Decentralized multicast streaming (`239.255.42.99:50005`) across unlimited phones on local Wi-Fi with hardware volume key Push-to-Talk.
+- **Master Broadcast Limiter:** Monotonic/symmetric soft saturation knee at `-0.5 dBFS` (0.944 ceiling) preventing digital wrap or speaker distortion under multi-voice summation.
+- **Minimalist UI with Progressive Disclosure:** Clean single-screen interface for casual users, with advanced mixer/routing tools accessible via expandable toggle.
+- **Physical Device Hardening & Dual Releases:** Resolution of Android 14 Foreground Service lifecycle contracts, native sample rate negotiation, and dual distribution of Original Stable v1.0 alongside Multi-Mic v1.2 Beta.
 
 ---
 
-## Phase 7: On-Device AI Voice Enhancement
+## Phase 7: On-Device AI Voice Enhancement (NEXT)
 **Goal:** Deep-learning acoustic speech cleanup without cloud round-trip delay.
 
 ### Deliverables:

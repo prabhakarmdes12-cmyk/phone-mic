@@ -54,12 +54,26 @@ In `app/src/main/java/com/chiti/phonemic/audio/`:
   - `Manifest.permission.RECORD_AUDIO` (Must be granted before starting audio stream)
   - `Manifest.permission.BLUETOOTH_CONNECT` (Android 12+)
   - `Manifest.permission.POST_NOTIFICATIONS` (Android 13+)
+  - `Manifest.permission.CHANGE_WIFI_MULTICAST_STATE` (For LAN-1 Walkie-Talkie)
 - Ensure `BluetoothAudioRouter` correctly observes `AudioDeviceInfo.TYPE_BLUETOOTH_A2DP` and updates `connectedOutput`.
 
-### Step 5: Build & Test the APK
-- Execute the complete debug build:
+### Step 5: Android 14 FGS Contract & Notification Drawable Safety
+- In `MicForegroundService.kt`:
+  - Call `startForeground()` synchronously inside `onStartCommand()`. Never call `stopSelf()` without `startForeground()` having succeeded first.
+  - Dynamically dispatch `ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK` for `RECEIVER_MIXER` and `ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE` for `STANDALONE`, `TRANSMITTER`, and `WALKIE_TALKIE`.
+  - Use standard platform drawables (`android.R.drawable.ic_btn_speak_now`, `ic_media_pause`, `ic_menu_close_clear_cancel`) to prevent SystemUI vector crashes (`BadForegroundServiceNotificationException`).
+
+### Step 6: Multi-Device Network Streaming Engine
+- Verify network streaming components in `com.chiti.phonemic.network.*`:
+  - `UdpAudioStreamer`: 480-sample PCM16 datagrams with sequence ordering.
+  - `MultiChannelMixer`: 8-channel summing mixer with per-channel adaptive jitter buffers, gain trim (0–200%), and mute.
+  - `AudioServiceDiscovery`: Android NSD (mDNS) registration and discovery.
+  - Walkie-Talkie LAN-1: Multicast `239.255.42.99:50005` with `WifiManager.MulticastLock` and hardware volume key PTT (`KEYCODE_VOLUME_DOWN` / `KEYCODE_VOLUME_UP`).
+
+### Step 7: Build & Test the APK
+- Execute the complete debug build and test suite:
   ```bash
-  ./gradlew assembleDebug
+  ./gradlew assembleDebug testDebugUnitTest lintDebug
   ```
 - Verify output artifact exists:
   `app/build/outputs/apk/debug/app-debug.apk`
@@ -69,10 +83,13 @@ In `app/src/main/java/com/chiti/phonemic/audio/`:
 ## 4. Acceptance Criteria
 
 The build is considered **WORKING** when:
-1. `./gradlew assembleDebug` completes with **BUILD SUCCESSFUL** (exit code 0).
+1. `./gradlew assembleDebug testDebugUnitTest` completes with **BUILD SUCCESSFUL** (exit code 0).
 2. The APK installs cleanly via `adb install app/build/outputs/apk/debug/app-debug.apk`.
-3. Tapping the central **[MIC ON]** button prompts for audio permission, starts the Foreground Service, and routes mic audio through the connected audio output.
+3. Tapping the central **[MIC ON]** button prompts for audio permission, starts the Foreground Service synchronously, and routes mic audio through the connected audio output.
 4. The live VU meter moves dynamically in response to speaking into the microphone.
-5. Moving the **Input Gain** slider adjusts the volume level without audio clipping.
+5. Moving the **Master Gain** slider adjusts the volume level without audio clipping.
 6. Selecting a voice preset (*Natural*, *Clear Speech*, *Loud Speech*) alters filter parameters cleanly without clicks or pops.
-7. Tapping **[MIC OFF]** ceases all audio capture immediately and updates the foreground notification.
+7. Background music tracks play with real-time vocal auto-ducking (-14 dB attenuation during speech).
+8. In **Speaker Hub** mode, up to 8 client phones can connect concurrently with independent gain and mute controls, bounded by a soft-knee limiter at `-0.5 dBFS`.
+9. In **Walkie-Talkie Mesh** mode, holding the PTT button or hardware volume keys transmits audio over multicast UDP (`239.255.42.99:50005`) while silencing local playback to prevent feedback.
+10. Tapping **[MIC OFF]** ceases all audio capture immediately and clears the foreground notification.

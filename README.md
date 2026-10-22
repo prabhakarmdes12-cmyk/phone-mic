@@ -59,11 +59,15 @@ Millions of Bluetooth speakers have high-output acoustic amplifiers but no dedic
 ## 3. Key Features
 
 - **Instant Live Broadcasting:** Launch app → auto-detects connected speaker → tap to speak in `< 10 seconds`.
-- **Latency Optimization & Estimation:** Exposes estimated round-trip delay (ms) using acoustic chirp pinging.
+- **Multi-Mic Speaker Hub (Up to 8 Microphones):** Connect up to 8 smartphones wirelessly over local Wi-Fi to a single speaker station phone, each with dedicated live VU metering, gain trim, and individual mute controls.
+- **Wi-Fi Walkie-Talkie Mesh (LAN-1):** Instant local multicast push-to-talk across unlimited devices on the same Wi-Fi network with zero cloud servers and hardware volume key PTT.
+- **Hardware Volume Key PTT:** Hold physical `Volume Up` or `Volume Down` buttons to broadcast instantly without looking at or touching the screen.
+- **Smart Vocal Auto-Ducking DSP:** Automatically attenuates continuous background music by **-14 dB** during speech with smooth exponential attack (35ms) and natural release (650ms).
+- **Clean Distraction-Free UI:** Minimalist default interface displaying only the big Mic toggle, VU meter, and essential speaker status; advanced mixer controls, soundboard, and network tools tucked under an expandable toggle.
 - **Acoustic Feedback Protection:** Dynamically detects acoustic howling frequencies and applies sharp notch filters before oscillation occurs.
-- **Voice Presets:** Tailored DSP pipelines for *Natural*, *Clear Speech*, *Loud Speech*, *Warm Voice*, *Outdoor*, and *Karaoke*.
-- **Push-to-Talk & Toggle Modes:** Tap once for continuous presentation, or hold to broadcast (walkie-talkie style for announcements).
-- **Foreground Audio Service:** Operates stably while backgrounded or when the screen is locked, with persistent notifications and instant hardware mute.
+- **Voice Presets & Scenarios:** One-tap acoustic profiles for *Classroom*, *Fitness & Gym*, *Tour Guide*, *Singing & Karaoke*, and *Warehouse*.
+- **Android 14 Hardened Foreground Service:** Operates stably while backgrounded or when the screen is locked, with persistent notifications, compliant FGS role-based permission types, and instant hardware mute.
+- **Dual Release Distributions:** Download either the verified **Original Stable v1.0 Edition** (`app-v1.0-stable.apk`) or the cutting-edge **Multi-Mic v1.2 Beta Edition** (`app-debug.apk`) directly from the web landing page.
 - **Privacy First:** Strictly prevents accidental broadcasts on speaker reconnect, phone calls, or app relaunch. Requires explicit user activation.
 
 ---
@@ -75,12 +79,14 @@ Comprehensive engineering and product documentation is maintained in the [`docs/
 | Document | Description |
 |---|---|
 | 📋 [**Product Requirements Document (PRD)**](./docs/PRD.md) | Exhaustive PRD, personas, feature tiers (Free vs Pro), UI/UX specifications, error states, and metrics. |
-| 🏗️ [**System Architecture**](./docs/ARCHITECTURE.md) | Architectural decoupling of Audio Engine, Foreground Service, Bluetooth Router, and State Machines. |
-| 🎛️ [**Audio Engine & DSP Specification**](./docs/AUDIO_ENGINE_SPEC.md) | Mathematical design of the DSP pipeline, biquad filters, compression ratios, and feedback cancellation. |
+| 🏗️ [**System Architecture**](./docs/ARCHITECTURE.md) | Architectural decoupling of Audio Engine, Foreground Service, Bluetooth Router, Network Streamer, and State Machines. |
+| 🎛️ [**Audio Engine & DSP Specification**](./docs/AUDIO_ENGINE_SPEC.md) | Mathematical design of the DSP pipeline, biquad filters, dynamic ducking, 8-channel mixer, and feedback cancellation. |
+| 📻 [**Multi-Device Mesh & Walkie-Talkie**](./docs/MULTI_DEVICE_MESH.md) | Network streaming protocols, UDP frame specs, 8-slot preallocated pool, multicast LAN-1, and PTT tokens. |
 | ⚡ [**Latency & Codec Optimization**](./docs/LATENCY_OPTIMIZATION.md) | In-depth breakdown of Android A2DP latency, Bluetooth codecs (SBC, AAC, aptX, LDAC, LC3), and chirp test. |
-| 🗺️ [**Engineering Roadmap**](./docs/ROADMAP.md) | Multi-phase roadmap from Phase 0 (Audio Spike) to Phase 8 (Chiti PA Distributed Ecosystem). |
+| 🗺️ [**Engineering Roadmap**](./docs/ROADMAP.md) | Multi-phase roadmap from Phase 0 (Spike) through Phase 6 (MultiMic Mixer) and Phase 8 (Chiti PA Ecosystem). |
 | 🧪 [**Testing & Hardware Spike Plan**](./docs/TESTING_AND_SPIKE.md) | Hardware testing matrix across phone brands and Bluetooth speakers, benchmark criteria, and stability tests. |
-| 🤖 [**AI Agent Guide (AGENTS.md)**](./AGENTS.md) | Operational guidelines, coding conventions, native audio real-time safety rules, and instructions for AI agents. |
+| ✅ [**Implementation & Verification**](./docs/IMPLEMENTATION_VERIFICATION.md) | Build instructions, CI run logs, Android 14 FGS crash resolutions, and device acceptance test suites. |
+| 🤖 [**AI Agent Guide (AGENTS.md)**](./AGENTS.md) | Operational rules, real-time safety constraints, network protocols, and guidelines for AI developers. |
 
 ---
 

@@ -14,13 +14,18 @@ PhoneMic transforms a standard Android smartphone into a real-time wireless micr
    - **ZERO memory allocation (`malloc`, `new`, `std::vector::push_back`, etc.)** within the audio processing callback thread.
    - **ZERO blocking synchronization primitives (`mutex.lock()`, semaphores, file I/O, network I/O, IPC)** on the audio rendering thread.
    - Use lock-free single-producer single-consumer (SPSC) ring buffers for passing audio frames between capture, DSP, and playback.
-3. **Privacy-First Broadcasting:**
+3. **Android 14+ Foreground Service Contract & Notification Safety:**
+   - On Android 14+ (API 34+), `context.startForegroundService()` requires `Service.startForeground()` to be called synchronously and immediately in `onStartCommand()`.
+   - **NEVER** call `stopSelf()` without `startForeground()` having succeeded; doing so causes Android OS to throw an uncatchable `ForegroundServiceDidNotStartInTimeException`.
+   - **Notification Icons:** Small icons and action icons MUST be valid monochrome system drawables (`android.R.drawable.ic_btn_speak_now`, etc.). Never pass vector drawables with solid background rectangles or multi-colored paths to avoid SystemUI `BadForegroundServiceNotificationException` crashes.
+   - **Role-Based FGS Types:** Use single role-specific types: `ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK` for Receiver/Mixer stations and `ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE` for all mic-capturing roles. Never bitwise-combine `MICROPHONE or MEDIA_PLAYBACK` on standard microphone capture.
+4. **Privacy-First Broadcasting:**
    - The microphone must NEVER automatically re-broadcast without explicit user interaction after:
      - Bluetooth disconnection & reconnection
      - An incoming or outgoing cellular/VoIP call
      - Application crash, restart, or reboot
    - An active microphone session MUST display both an Android persistent foreground notification and an in-app animated visual indicator.
-4. **Safety Peak Limiter is Permanent:**
+5. **Safety Peak Limiter is Permanent:**
    - The final stage before output MUST always include a brickwall peak limiter to prevent acoustic blast hazards caused by drops, taps, or sudden acoustic feedback howling.
 
 ---
@@ -33,9 +38,11 @@ phone-mic/
 ├── docs/
 │   ├── PRD.md                     # Product Requirements Document
 │   ├── ARCHITECTURE.md            # System architecture, lifecycle, and state machines
-│   ├── AUDIO_ENGINE_SPEC.md       # DSP algorithms, filters, dynamic processors
+│   ├── AUDIO_ENGINE_SPEC.md       # DSP algorithms, filters, dynamic ducking, mixer
+│   ├── MULTI_DEVICE_MESH.md       # Network streaming, 8-channel mixer, walkie-talkie
 │   ├── LATENCY_OPTIMIZATION.md    # Bluetooth codecs, buffer tuning, chirp pinging
 │   ├── ROADMAP.md                 # 8-phase implementation roadmap
+│   ├── IMPLEMENTATION_VERIFICATION.md # CI runs, crash resolutions, acceptance tests
 │   └── TESTING_AND_SPIKE.md       # Device test matrix & acoustic spike procedures
 ├── app/
 │   ├── src/main/cpp/              # C++ Native Audio Engine (Oboe/AAudio)
@@ -45,23 +52,16 @@ phone-mic/
 │   ├── src/main/java/com/chiti/phonemic/
 │   │   ├── MainActivity.kt        # Single-activity Jetpack Compose UI host
 │   │   ├── audio/                 # Audio engine interfaces & Kotlin DSP managers
-│   │   │   ├── AudioEngine.kt     # Common interface for native/fallback engines
-│   │   │   ├── AudioConfig.kt     # Buffer size, sample rate, burst frames
-│   │   │   ├── AudioState.kt      # State models: IDLE, CONNECTING, ACTIVE, MUTED, ERROR
-│   │   │   └── DspPipeline.kt     # DSP pipeline parameters & preset controller
 │   │   ├── bluetooth/             # Bluetooth audio routing & device monitoring
-│   │   │   └── BluetoothAudioRouter.kt
 │   │   ├── service/               # Foreground service for screen-off microphone operation
-│   │   │   └── MicForegroundService.kt
 │   │   ├── model/                 # Data models: presets, device profiles, metrics
-│   │   │   ├── VoicePreset.kt
-│   │   │   ├── DeviceProfile.kt
-│   │   │   └── LatencyMetrics.kt
-│   │   └── ui/                    # Jetpack Compose UI
-│   │       ├── HomeScreen.kt
-│   │       ├── components/        # VU meters, live waveforms, giant Mic button
-│   │       └── theme/             # Dark physical-instrument theme
+│   │   ├── network/               # Multi-channel UDP audio streamer & discovery
+│   │   └── ui/                    # Jetpack Compose UI (PA Console, VU meter, Tools)
 │   └── src/main/AndroidManifest.xml
+└── web/                           # Landing page and APK distribution
+    ├── index.html                 # Accessible WCAG AAA download page with live demo
+    ├── app-debug.apk              # Latest v1.2 Beta edition (Multi-Mic & Walkie-Talkie)
+    └── app-v1.0-stable.apk        # Original Stable v1.0 edition
 ```
 
 ---
@@ -69,9 +69,9 @@ phone-mic/
 ## 3. Real-Time Audio Constraints & C++ Guidelines
 
 When modifying or extending `app/src/main/cpp/`:
-- **Engine Framework:** Use **Google Oboe** / **AAudio** with `PerformanceMode::LowLatency` and `SharingMode::Exclusive`.
-- **Sample Rate:** Target native hardware sample rate (typically 48,000 Hz) to eliminate internal OS resampler latency.
-- **Audio Format:** 16-bit PCM (`AudioFormat::I16`) or 32-bit Float (`AudioFormat::Float`). Float is preferred internally for DSP calculations to maintain dynamic range without integer clipping.
+- **Engine Framework:** Use **Google Oboe** / **AAudio** with `PerformanceMode::LowLatency` and `SharingMode::Shared` (allows compatibility across OEM HALs without failing exclusive reservations).
+- **Sample Rate:** Allow native hardware sample rate negotiation on the input stream (`inputStream_->getSampleRate()`) and configure output to match. Never force sample rates with resamplers on input builders, as this crashes on low-latency MMAP streams.
+- **Audio Format:** Support both `AudioFormat::Float` and `AudioFormat::I16` on input. If float input is rejected by the physical device microphone ADC, fall back to `I16` and convert `int16_t` to `float` in `onAudioReady`.
 - **Ring Buffers:** Audio frames must be written to and read from lock-free ring buffers (atomic read/write pointers with power-of-two capacity).
 
 ---

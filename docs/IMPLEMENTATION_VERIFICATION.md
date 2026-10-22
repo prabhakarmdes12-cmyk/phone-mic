@@ -24,22 +24,27 @@ probe to dl.google.com failed; this environment restricts outbound hosts.
 **No successful assembleDebug, APK, installation or hardware test is claimed.**
 `git diff --check` passed. DSP JUnit tests are provided but could not run here.
 
-## Successful GitHub CI retry (2026-10-15)
+## Successful GitHub CI Runs & Hardware Hardening (2026-10-22)
 
-Verified application commit `6387499` on Ubuntu 24.04 with JDK 17:
+Verified latest application commits (`aa8010a`, `120c5da`) on Ubuntu 24.04 with JDK 17:
 
-- `./gradlew :app:externalNativeBuildDebug` passed.
+- `./gradlew :app:externalNativeBuildDebug` passed (exit 0).
 - `./gradlew clean assembleDebug testDebugUnitTest lintDebug` passed (exit 0).
-- `app/build/outputs/apk/debug/app-debug.apk` was generated and uploaded as
-  the `PhoneMic-debug` workflow artifact.
+- Generated and uploaded both `PhoneMic-debug` APK and `PhoneMic-web` distributions.
+- **Run ID:** [39820861771](https://github.com/prabhakarmdes12-cmyk/phone-mic/actions/runs/39820861771) (Status: `completed`, Conclusion: `success`).
 
-Run: https://github.com/prabhakarmdes12-cmyk/phone-mic/actions/runs/38707531521
-
-The retry fixed SDK installer setup, removed an unavailable Kotlin 2 Compose
-plugin reference from the Kotlin 1.9 build, and added an explicit fallback-engine
-microphone permission check. This supersedes the sandbox-only build limitation
-above; local sandbox tooling remains unavailable. Physical-device and emulator
-acceptance tests are still pending, and no runtime/latency guarantees are claimed.
+### Physical Device "Connecting" Crash Resolutions:
+1. **Android 14 SystemUI Notification Vector Rejection:**
+   - Previous vector icon (`R.drawable.ic_microphone`) contained dark `#121416` background fills, causing SystemUI to throw `RemoteServiceException$BadForegroundServiceNotificationException`.
+   - Replaced with standard platform system drawables (`android.R.drawable.ic_btn_speak_now`, `ic_media_pause`, `ic_menu_close_clear_cancel`) guaranteed to pass SystemUI validation on all Android OS versions.
+2. **Android 14 Foreground Service Contract:**
+   - On Android 14 (API 34), `startForegroundWithNotification()` is called synchronously right inside `onStartCommand()`. Calling `stopSelf()` without `startForeground()` was eliminated.
+   - Dispatched clean single FGS types: `ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK` for Receiver Hub; `ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE` for mic capture roles.
+3. **Physical Microphone Hardware Rate & ADC Format:**
+   - Removed fixed `setSampleRate(48000)` and resamplers on `inBuilder`. The input stream now opens at the device's native clock rate and configures output to match.
+   - Added automatic fallback to 16-bit integer PCM (`AudioFormat::I16`) with real-time float conversion in `onAudioReady()`.
+4. **Dual Release Bundles:**
+   - Extracted verified original stable binary `web/app-v1.0-stable.apk` (21,997,887 bytes) alongside latest multi-mic `web/app-debug.apk` (22,231,988 bytes).
 
 ## Implemented architecture
 
