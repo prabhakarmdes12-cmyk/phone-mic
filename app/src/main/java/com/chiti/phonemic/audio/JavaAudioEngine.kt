@@ -49,20 +49,38 @@ class JavaAudioEngine(private val context: Context,
             val outputBytes = AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
             check(inputBytes > 0 && outputBytes > 0)
             val format = AudioFormat.Builder().setSampleRate(rate).setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-            val input = if ((role != NetworkRole.RECEIVER_MIXER && role != NetworkRole.WALKIE_TALKIE)) AudioRecord.Builder().setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
-                .setAudioFormat(format.setChannelMask(AudioFormat.CHANNEL_IN_MONO).build())
-                .setBufferSizeInBytes(max(inputBytes, 1920)).build().also { record = it } else null
+            val input = if ((role != NetworkRole.RECEIVER_MIXER && role != NetworkRole.WALKIE_TALKIE)) {
+                val rec = runCatching {
+                    AudioRecord.Builder().setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
+                        .setAudioFormat(format.setChannelMask(AudioFormat.CHANNEL_IN_MONO).build())
+                        .setBufferSizeInBytes(max(inputBytes, 1920)).build()
+                }.getOrNull()
+                if (rec == null || rec.state != AudioRecord.STATE_INITIALIZED) {
+                    runCatching { rec?.release() }
+                    runCatching {
+                        AudioRecord.Builder().setAudioSource(MediaRecorder.AudioSource.MIC)
+                            .setAudioFormat(format.setChannelMask(AudioFormat.CHANNEL_IN_MONO).build())
+                            .setBufferSizeInBytes(max(inputBytes, 1920)).build()
+                    }.getOrNull()
+                } else rec
+            }?.also { record = it }
             val output = if (role != NetworkRole.TRANSMITTER) AudioTrack.Builder().setAudioAttributes(AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
                 .setAudioFormat(format.setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
                 .setBufferSizeInBytes(max(outputBytes, 1920)).setTransferMode(AudioTrack.MODE_STREAM)
                 .setPerformanceMode(AudioTrack.PERFORMANCE_MODE_LOW_LATENCY).build().also { track = it } else null
-            check((input == null || input.state == AudioRecord.STATE_INITIALIZED) && (output == null || output.state == AudioTrack.STATE_INITIALIZED))
+            if ((input != null && input.state != AudioRecord.STATE_INITIALIZED) || (output != null && output.state != AudioTrack.STATE_INITIALIZED)) {
+                stop(); state.value = AudioState.Error("Audio hardware initialization failed"); return false
+            }
             val samples = ShortArray(480)
             val dsp = SpeechDsp(soundboard)
             setInputGain(initialGainDb)
-            input?.startRecording()
-            check(input == null || input.recordingState == AudioRecord.RECORDSTATE_RECORDING)
+            if (input != null) {
+                runCatching { input.startRecording() }
+                if (input.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
+                    stop(); state.value = AudioState.Error("Microphone recording could not be started"); return false
+                }
+            }
             output?.play()
             running = true
             state.value = AudioState.Active(outputDeviceName, 0, initialGainDb, preset)

@@ -78,11 +78,7 @@ class MicForegroundService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 deviceName = intent.getStringExtra(EXTRA_DEVICE_NAME) ?: "Bluetooth Speaker"
-                if (!startForegroundWithNotification()) {
-                    session.serviceStartFailed("Android could not start the required foreground audio service")
-                    stopSelf()
-                    return START_NOT_STICKY
-                }
+                startForegroundWithNotification()
                 acquireWakeLock()
                 scope.launch {
                     runCatching {
@@ -120,47 +116,26 @@ class MicForegroundService : Service() {
             NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("PhoneMic")
                 .setContentText("Microphone audio service active")
-                .setSmallIcon(R.drawable.ic_microphone)
+                .setSmallIcon(android.R.drawable.ic_btn_speak_now)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .build()
         }
 
+        val fgsType = if (session.role.value == NetworkRole.RECEIVER_MIXER) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+        } else {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val typedResult = runCatching {
-                val type = when (session.role.value) {
-                    NetworkRole.RECEIVER_MIXER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                    NetworkRole.TRANSMITTER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                    NetworkRole.STANDALONE, NetworkRole.WALKIE_TALKIE -> {
-                        if (Build.VERSION.SDK_INT >= 34) {
-                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                        } else {
-                            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                        }
-                    }
-                }
-                startForeground(NOTIFICATION_ID, notification, type)
+            val typedSuccess = runCatching {
+                startForeground(NOTIFICATION_ID, notification, fgsType)
                 true
             }.onFailure { e ->
-                android.util.Log.w("MicForegroundService", "Typed startForeground failed, attempting fallback", e)
+                android.util.Log.w("MicForegroundService", "Typed startForeground failed, trying untyped fallback", e)
             }.getOrDefault(false)
 
-            if (typedResult) return true
-
-            if (Build.VERSION.SDK_INT >= 34) {
-                val singleTypeResult = runCatching {
-                    val fallbackType = if (session.role.value == NetworkRole.RECEIVER_MIXER) {
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-                    } else {
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-                    }
-                    startForeground(NOTIFICATION_ID, notification, fallbackType)
-                    true
-                }.onFailure { e ->
-                    android.util.Log.w("MicForegroundService", "Single-type startForeground failed, attempting untyped", e)
-                }.getOrDefault(false)
-
-                if (singleTypeResult) return true
-            }
+            if (typedSuccess) return true
         }
 
         return runCatching {
@@ -220,10 +195,10 @@ class MicForegroundService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(statusText)
-            .setSmallIcon(R.drawable.ic_microphone)
+            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setContentIntent(contentPendingIntent)
-            .addAction(R.drawable.ic_microphone, muteActionText, mutePendingIntent)
-            .addAction(R.drawable.ic_microphone, "STOP", stopPendingIntent)
+            .addAction(android.R.drawable.ic_media_pause, muteActionText, mutePendingIntent)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "STOP", stopPendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()

@@ -1779,13 +1779,22 @@
           <span>GitHub</span>
         </a>
 
+        <a href="app-v1.0-stable.apk" class="btn-secondary" id="navStableBtn" style="padding: 8px 14px; font-size: 0.85rem; border-color: rgba(62, 207, 142, 0.45); color: #3ecf8e;" download="PhoneMic-v1.0-stable.apk" aria-label="Download v1.0 Original Stable APK">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" x2="12" y1="15" y2="3"/>
+          </svg>
+          <span>v1.0 Stable</span>
+        </a>
+
         <a href="app-debug.apk" class="btn-nav" id="navDownloadBtn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
             <line x1="12" x2="12" y1="15" y2="3"/>
           </svg>
-          <span>Download APK</span>
+          <span>Download v1.2</span>
         </a>
       </div>
     </div>
@@ -1911,6 +1920,15 @@
             <line x1="12" x2="12" y1="15" y2="3"/>
           </svg>
           <span>Download Free APK v1.2 (22 MB)</span>
+        </a>
+
+        <a href="app-v1.0-stable.apk" class="btn-secondary" id="downloadStableBtn" download="PhoneMic-v1.0-stable.apk" style="border-color: rgba(62, 207, 142, 0.45); color: #3ecf8e;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" x2="12" y1="15" y2="3"/>
+          </svg>
+          <span>Download v1.0 (Original Stable - 22 MB)</span>
         </a>
 
         <a href="#demo" class="btn-secondary">
@@ -2647,7 +2665,7 @@
         <div class="step-card">
           <div class="step-number" aria-hidden="true">1</div>
           <h3>Download the APK</h3>
-          <p>Tap <strong>Download APK</strong>. When Android asks to confirm downloading an APK directly, tap <strong>Download anyway</strong>.</p>
+          <p>Choose your edition: <a href="app-debug.apk" style="color:var(--accent-cyan); font-weight:600;" download="PhoneMic-v1.2-beta.apk">Latest v1.2 Beta</a> (Multi-Mic & Walkie-Talkie) or <a href="app-v1.0-stable.apk" style="color:#3ecf8e; font-weight:600;" download="PhoneMic-v1.0-stable.apk">Original Stable v1.0</a>. When Android asks to confirm, tap <strong>Download anyway</strong>.</p>
         </div>
 
         <div class="step-card">
@@ -3803,11 +3821,16 @@
     // ─────────────────────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', () => {
       const downloadBtn = document.getElementById('downloadBtn');
+      const downloadStableBtn = document.getElementById('downloadStableBtn');
       const navDownloadBtn = document.getElementById('navDownloadBtn');
+      const navStableBtn = document.getElementById('navStableBtn');
       if (window.location.protocol.startsWith('http')) {
-        const url = new URL('app-debug.apk', window.location.href).href;
-        downloadBtn.href = url;
-        navDownloadBtn.href = url;
+        const urlV12 = new URL('app-debug.apk', window.location.href).href;
+        const urlV10 = new URL('app-v1.0-stable.apk', window.location.href).href;
+        if (downloadBtn) downloadBtn.href = urlV12;
+        if (navDownloadBtn) navDownloadBtn.href = urlV12;
+        if (downloadStableBtn) downloadStableBtn.href = urlV10;
+        if (navStableBtn) navStableBtn.href = urlV10;
       }
     });
   </script>

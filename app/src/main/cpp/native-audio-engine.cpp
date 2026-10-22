@@ -169,12 +169,16 @@ bool NativeAudioEngine::openStreams() {
              ->setSharingMode(oboe::SharingMode::Shared)
              ->setFormat(oboe::AudioFormat::Float)
              ->setChannelCount(oboe::ChannelCount::Mono)
-             ->setSampleRate(48000)
-             ->setSampleRateConversionQuality(oboe::SampleRateConversionQuality::Medium)
              ->setInputPreset(oboe::InputPreset::VoiceCommunication)
              ->setDataCallback(this);
 
     oboe::Result res = inBuilder.openStream(inputStream_);
+    if (res != oboe::Result::OK) {
+        LOGW("Failed to open Float input stream (%s), attempting I16 fallback...", oboe::convertToText(res));
+        inBuilder.setFormat(oboe::AudioFormat::I16);
+        res = inBuilder.openStream(inputStream_);
+    }
+
     if (res != oboe::Result::OK) {
         LOGE("Failed to open input stream: %s", oboe::convertToText(res));
         closeStreams();
@@ -563,12 +567,25 @@ oboe::DataCallbackResult NativeAudioEngine::onAudioReady(
     void* audioData,
     int32_t numFrames) {
 
-    auto* floatData = static_cast<float*>(audioData);
-
     if (stream->getDirection() == oboe::Direction::Input) {
-        // Microphone captured samples
-        ringBuffer_->write(floatData, static_cast<size_t>(numFrames));
+        if (stream->getFormat() == oboe::AudioFormat::I16) {
+            auto* intData = static_cast<const int16_t*>(audioData);
+            float conv[512];
+            int32_t processed = 0;
+            while (processed < numFrames) {
+                int32_t chunk = std::min(numFrames - processed, 512);
+                for (int32_t i = 0; i < chunk; ++i) {
+                    conv[i] = static_cast<float>(intData[processed + i]) / 32768.0f;
+                }
+                ringBuffer_->write(conv, static_cast<size_t>(chunk));
+                processed += chunk;
+            }
+        } else {
+            auto* floatData = static_cast<float*>(audioData);
+            ringBuffer_->write(floatData, static_cast<size_t>(numFrames));
+        }
     } else {
+        auto* floatData = static_cast<float*>(audioData);
         // Output playback stream
         size_t readCount = ringBuffer_->read(floatData, static_cast<size_t>(numFrames));
         if (readCount < static_cast<size_t>(numFrames)) {
@@ -666,7 +683,7 @@ Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeGetUnderruns(JNIEnv* env, 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeReadProcessed(JNIEnv* env, jobject, jlong handle, jshortArray target) {
     auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
-    if (!engine) return 0;
+    if (!engine || !target) return 0;
     float data[2048];
     jshort pcm[2048];
     const auto count = engine->readProcessed(data, std::min(2048, env->GetArrayLength(target)));
