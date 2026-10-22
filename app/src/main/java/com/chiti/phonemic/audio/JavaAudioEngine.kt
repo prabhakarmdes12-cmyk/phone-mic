@@ -49,21 +49,22 @@ class JavaAudioEngine(private val context: Context,
             val outputBytes = AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
             check(inputBytes > 0 && outputBytes > 0)
             val format = AudioFormat.Builder().setSampleRate(rate).setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-            val input = if ((role != NetworkRole.RECEIVER_MIXER && role != NetworkRole.WALKIE_TALKIE)) {
-                val rec = runCatching {
+            val input: AudioRecord? = if (role != NetworkRole.RECEIVER_MIXER && role != NetworkRole.WALKIE_TALKIE) {
+                var rec = runCatching {
                     AudioRecord.Builder().setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
                         .setAudioFormat(format.setChannelMask(AudioFormat.CHANNEL_IN_MONO).build())
                         .setBufferSizeInBytes(max(inputBytes, 1920)).build()
                 }.getOrNull()
                 if (rec == null || rec.state != AudioRecord.STATE_INITIALIZED) {
                     runCatching { rec?.release() }
-                    runCatching {
+                    rec = runCatching {
                         AudioRecord.Builder().setAudioSource(MediaRecorder.AudioSource.MIC)
                             .setAudioFormat(format.setChannelMask(AudioFormat.CHANNEL_IN_MONO).build())
                             .setBufferSizeInBytes(max(inputBytes, 1920)).build()
                     }.getOrNull()
-                } else rec
-            }?.also { record = it }
+                }
+                rec?.also { record = it }
+            } else null
             val output = if (role != NetworkRole.TRANSMITTER) AudioTrack.Builder().setAudioAttributes(AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
                 .setAudioFormat(format.setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
