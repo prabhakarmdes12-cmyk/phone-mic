@@ -68,6 +68,7 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
         meterJob?.cancel()
         meterJob = null
         val handle = nativeHandle
+        nativeHandle = 0L
         if (handle != 0L) {
             runCatching { nativeStop(handle) }
             val tail = ShortArray(2048)
@@ -77,7 +78,6 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
             }
             runCatching { nativeDestroy(handle) }
         }
-        nativeHandle = 0L
         _audioState.value = AudioState.Idle
         _currentRmsDb.value = -96.0f
         _currentPeakDb.value = -96.0f

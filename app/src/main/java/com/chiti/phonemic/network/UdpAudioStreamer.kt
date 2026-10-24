@@ -67,20 +67,35 @@ class UdpAudioStreamer(private val context: Context? = null) {
         require(groupAddress.isMulticastAddress && port == AudioServiceDiscovery.PORT)
         val app = checkNotNull(context) { "Android context required for multicast" }
         val connectivity = app.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = connectivity.activeNetwork ?: error("Join a local Wi-Fi network first")
-        require(connectivity.getNetworkCapabilities(network)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) {
-            "Walkie-Talkie requires active Wi-Fi (disable VPN if it hides the Wi-Fi interface)"
+        
+        // Find best network interface (supporting Wi-Fi or local Hotspot / AP)
+        val activeNet = connectivity.activeNetwork
+        val activeInterfaceName = activeNet?.let { connectivity.getLinkProperties(it)?.interfaceName }
+        var nic = activeInterfaceName?.let { NetworkInterface.getByName(it) }
+
+        if (nic == null || !nic.isUp || !nic.supportsMulticast()) {
+            // Fallback: search all available network interfaces for Wi-Fi, Hotspot, or local LAN
+            nic = NetworkInterface.getNetworkInterfaces()?.toList()?.firstOrNull { candidate ->
+                try {
+                    candidate.isUp && !candidate.isLoopback && candidate.supportsMulticast() &&
+                        (candidate.name.startsWith("wlan") || candidate.name.startsWith("ap") || 
+                         candidate.name.startsWith("swlan") || candidate.name.startsWith("rndis") ||
+                         candidate.inetAddresses.any { !it.isLoopbackAddress && it is java.net.Inet4Address })
+                } catch (_: Exception) { false }
+            }
         }
-        val interfaceName = connectivity.getLinkProperties(network)?.interfaceName ?: error("Wi-Fi interface unavailable")
-        val nic = NetworkInterface.getByName(interfaceName) ?: error("Wi-Fi interface unavailable")
-        val localAddresses = nic.inetAddresses.toList().toTypedArray()
-        val wifi = app.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val targetNic = nic ?: error("Active Wi-Fi or Mobile Hotspot required for Walkie-Talkie")
+        val localAddresses = targetNic.inetAddresses.toList().toTypedArray()
+        val wifi = app.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
         try {
-            multicastLock = wifi.createMulticastLock("PhoneMicMulticast").apply { setReferenceCounted(false); acquire() }
+            multicastLock = runCatching {
+                wifi?.createMulticastLock("PhoneMicMulticast")?.apply { setReferenceCounted(false); acquire() }
+            }.getOrNull()
             val sock = MulticastSocket(null).also { socket = it }
             sock.reuseAddress = true; sock.bind(InetSocketAddress(port)); sock.soTimeout = 2
-            sock.networkInterface = nic; sock.timeToLive = 1; sock.loopbackMode = true
-            sock.joinGroup(InetSocketAddress(groupAddress, port), nic)
+            runCatching { sock.networkInterface = targetNic }
+            sock.timeToLive = 1; sock.loopbackMode = true
+            sock.joinGroup(InetSocketAddress(groupAddress, port), targetNic)
             walkie = true
             launch(sock, groupAddress, port, true, localAddresses)
         } catch (e: Exception) { socket?.close(); releaseLock(); throw e }

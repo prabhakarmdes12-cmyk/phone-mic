@@ -201,6 +201,11 @@ bool NativeAudioEngine::openStreams() {
 
     res = outBuilder.openStream(outputStream_);
     if (res != oboe::Result::OK) {
+        LOGW("Failed to open Float output stream (%s), attempting I16 fallback...", oboe::convertToText(res));
+        outBuilder.setFormat(oboe::AudioFormat::I16);
+        res = outBuilder.openStream(outputStream_);
+    }
+    if (res != oboe::Result::OK) {
         LOGE("Failed to open output stream: %s", oboe::convertToText(res));
         closeStreams();
         return false;
@@ -585,15 +590,34 @@ oboe::DataCallbackResult NativeAudioEngine::onAudioReady(
             ringBuffer_->write(floatData, static_cast<size_t>(numFrames));
         }
     } else {
-        auto* floatData = static_cast<float*>(audioData);
-        // Output playback stream
-        size_t readCount = ringBuffer_->read(floatData, static_cast<size_t>(numFrames));
-        if (readCount < static_cast<size_t>(numFrames)) {
-            // Buffer underrun: fill remaining frames with silence
-            std::fill(floatData + readCount, floatData + numFrames, 0.0f);
+        if (stream->getFormat() == oboe::AudioFormat::I16) {
+            auto* intData = static_cast<int16_t*>(audioData);
+            float conv[512];
+            int32_t processed = 0;
+            while (processed < numFrames) {
+                int32_t chunk = std::min(numFrames - processed, 512);
+                size_t readCount = ringBuffer_->read(conv, static_cast<size_t>(chunk));
+                if (readCount < static_cast<size_t>(chunk)) {
+                    std::fill(conv + readCount, conv + chunk, 0.0f);
+                }
+                processDsp(conv, chunk);
+                recordBuffer_.write(conv, static_cast<size_t>(chunk));
+                for (int32_t i = 0; i < chunk; ++i) {
+                    intData[processed + i] = static_cast<int16_t>(std::clamp(conv[i] * 32767.0f, -32768.0f, 32767.0f));
+                }
+                processed += chunk;
+            }
+        } else {
+            auto* floatData = static_cast<float*>(audioData);
+            // Output playback stream
+            size_t readCount = ringBuffer_->read(floatData, static_cast<size_t>(numFrames));
+            if (readCount < static_cast<size_t>(numFrames)) {
+                // Buffer underrun: fill remaining frames with silence
+                std::fill(floatData + readCount, floatData + numFrames, 0.0f);
+            }
+            processDsp(floatData, numFrames);
+            recordBuffer_.write(floatData, static_cast<size_t>(numFrames));
         }
-        processDsp(floatData, numFrames);
-        recordBuffer_.write(floatData, static_cast<size_t>(numFrames));
     }
 
     return oboe::DataCallbackResult::Continue;

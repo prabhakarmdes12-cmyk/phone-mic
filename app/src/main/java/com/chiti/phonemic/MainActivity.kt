@@ -589,11 +589,19 @@ fun PhoneMicScreen(
                                     permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
                                 }
                             } else if (networkRole == NetworkRole.WALKIE_TALKIE) {
-                                detectTapGestures(onPress = {
-                                    runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
-                                    audioEngine.setPttPressed(true)
-                                    try { tryAwaitRelease() } finally { audioEngine.setPttPressed(false) }
-                                })
+                                if (isActive) {
+                                    detectTapGestures(onPress = {
+                                        runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                        audioEngine.setPttPressed(true)
+                                        try { tryAwaitRelease() } finally { audioEngine.setPttPressed(false) }
+                                    })
+                                } else {
+                                    detectTapGestures {
+                                        runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
+                                        val devName = connectedDevice?.name ?: "Phone speaker"
+                                        scope.launch { audioEngine.start(devName, inputGainDb) }
+                                    }
+                                }
                             } else if (micMode == MicOperationMode.PUSH_TO_TALK) {
                                 detectTapGestures(
                                     onPress = {
@@ -649,7 +657,7 @@ fun PhoneMicScreen(
                         Text(
                             text = when {
                                 networkRole == NetworkRole.WALKIE_TALKIE && audioState == AudioState.Connecting -> "JOINING LAN-1"
-                                networkRole == NetworkRole.WALKIE_TALKIE -> if (meshPttPressed && isActive) "TRANSMITTING • RELEASE" else "HOLD TO TALK"
+                                networkRole == NetworkRole.WALKIE_TALKIE -> if (meshPttPressed && isActive) "TRANSMITTING • RELEASE" else if (isActive) "HOLD TO TALK" else "TAP TO JOIN LAN-1"
                                 networkRole == NetworkRole.RECEIVER_MIXER && isActive -> "STATION PLAYING • STOP"
                                 networkRole == NetworkRole.RECEIVER_MIXER && audioState == AudioState.Connecting -> "CONNECTING"
                                 networkRole == NetworkRole.RECEIVER_MIXER -> "START SPEAKER STATION"
