@@ -13,41 +13,47 @@ class VoiceModulationAndRecordingTest {
     @Test
     fun testKaraokeSingingReverbAndDualTapEcho() {
         val dsp = SpeechDsp()
-        // 48000 Hz: 1 second = 48000 samples
+        // Warm up gain smoother
+        dsp.process(ShortArray(1500), 1500, 1.0f, VoicePreset.KARAOKE.id)
+
+        // 48000 Hz: 12000 samples
         val samples = ShortArray(12000)
-        samples[0] = 30000 // Impulse at t = 0
+        samples[0] = 30000 // Impulse at t = 0 (gain is now ~0.95+)
 
         dsp.process(samples, samples.size, 1.0f, VoicePreset.KARAOKE.id)
 
         // Tap 2 early reflection is at 60ms (2880 samples)
         val tap2Region = samples.sliceArray(2870..2890)
-        assertTrue("Karaoke early reflection at 60ms should be non-zero", tap2Region.any { abs(it.toInt()) > 500 })
+        assertTrue("Karaoke early reflection at 60ms should be non-zero", tap2Region.any { abs(it.toInt()) > 1000 })
 
         // Tap 1 slapback echo is at 160ms (7680 samples)
         val tap1Region = samples.sliceArray(7670..7690)
-        assertTrue("Karaoke slapback echo at 160ms should be non-zero", tap1Region.any { abs(it.toInt()) > 500 })
+        assertTrue("Karaoke slapback echo at 160ms should be non-zero", tap1Region.any { abs(it.toInt()) > 1000 })
 
         // Reverb decay tail should persist after tap 1
         val reverbTail = samples.sliceArray(8000..10000)
-        assertTrue("Reverb tail should persist smoothly", reverbTail.any { abs(it.toInt()) > 50 })
+        assertTrue("Reverb tail should persist smoothly", reverbTail.any { abs(it.toInt()) > 100 })
     }
 
     @Test
     fun testStudioVocalRoomAmbience() {
         val dsp = SpeechDsp()
+        // Warm up gain smoother
+        dsp.process(ShortArray(1500), 1500, 1.0f, VoicePreset.STUDIO_VOCAL.id)
+
         val samples = ShortArray(6000)
-        samples[0] = 30000 // Impulse at t = 0
+        samples[0] = 30000 // Impulse at t = 0 (gain is now ~0.95+)
 
         dsp.process(samples, samples.size, 1.0f, VoicePreset.STUDIO_VOCAL.id)
 
         // Studio vocal reflection is at 45ms (2160 samples)
         val roomReflection = samples.sliceArray(2150..2170)
-        assertTrue("Studio vocal room reflection at 45ms should be present", roomReflection.any { abs(it.toInt()) > 500 })
+        assertTrue("Studio vocal room reflection at 45ms should be present", roomReflection.any { abs(it.toInt()) > 1000 })
 
         // Studio vocal should have subtle decay, shorter than Karaoke
         val postReflection = samples.sliceArray(5000..5500)
         val maxPostReflection = postReflection.maxOf { abs(it.toInt()) }
-        assertTrue("Studio vocal decay should taper off gently", maxPostReflection < 200)
+        assertTrue("Studio vocal decay should taper off gently", maxPostReflection < 500)
     }
 
     @Test
