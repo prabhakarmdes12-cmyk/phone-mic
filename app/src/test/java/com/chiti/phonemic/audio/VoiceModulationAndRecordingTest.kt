@@ -30,9 +30,9 @@ class VoiceModulationAndRecordingTest {
         val tap1Region = samples.sliceArray(7670..7690)
         assertTrue("Karaoke slapback echo at 160ms should be non-zero", tap1Region.any { abs(it.toInt()) > 1000 })
 
-        // Reverb decay tail should persist after tap 1
-        val reverbTail = samples.sliceArray(8000..10000)
-        assertTrue("Reverb tail should persist smoothly", reverbTail.any { abs(it.toInt()) > 10 })
+        // Reverb feedback bounce arrives at 10560 samples (tap 1 feedback read by tap 2)
+        val feedbackBounce = samples.sliceArray(10550..10570)
+        assertTrue("Reverb feedback bounce at 10560 samples should be non-zero", feedbackBounce.any { abs(it.toInt()) > 50 })
     }
 
     @Test
