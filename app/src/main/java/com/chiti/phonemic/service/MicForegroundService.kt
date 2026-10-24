@@ -121,10 +121,16 @@ class MicForegroundService : Service() {
                 .build()
         }
 
-        val fgsType = if (session.role.value == NetworkRole.RECEIVER_MIXER) {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-        } else {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        val fgsType = when (session.role.value) {
+            NetworkRole.RECEIVER_MIXER -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+            NetworkRole.WALKIE_TALKIE -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                } else {
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+                }
+            }
+            else -> ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

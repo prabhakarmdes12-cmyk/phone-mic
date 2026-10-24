@@ -156,6 +156,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        try {
+            System.setProperty("java.net.preferIPv4Stack", "true")
+            System.setProperty("java.net.preferIPv6Addresses", "false")
+        } catch (_: Exception) {}
+
         audioEngine = AudioSessionManager.get(this)
         bluetoothRouter = audioEngine.router
 
@@ -582,7 +587,7 @@ fun PhoneMicScreen(
                             color = if (isPttHolding || (isActive && networkRole != NetworkRole.WALKIE_TALKIE)) Color(0xFFC499FF) else Color(0xFF383842),
                             shape = CircleShape
                         )
-                        .pointerInput(micMode, hasPermissions, networkRole) {
+                        .pointerInput(micMode, hasPermissions, networkRole, isActive) {
                             val needsMic = !hasPermissions && networkRole != NetworkRole.RECEIVER_MIXER
                             if (needsMic) {
                                 detectTapGestures {
@@ -715,8 +720,16 @@ fun PhoneMicScreen(
 
             if (networkRole == NetworkRole.RECEIVER_MIXER) MixerSummaryCard(audioEngine)
             if (networkRole == NetworkRole.WALKIE_TALKIE) {
-                Text("Channel: LAN-1 • Hold Volume Keys to Speak", fontSize = 12.sp, color = Color(0xFFC499FF))
-                androidx.compose.material3.TextButton(onClick = { audioEngine.stop() }) { Text("LEAVE CHANNEL") }
+                Text(
+                    text = if (isActive) "Channel: LAN-1 • Hold Button or Vol Keys to Speak" else "Walkie-Talkie Mesh • LAN-1",
+                    fontSize = 12.sp,
+                    color = Color(0xFFC499FF)
+                )
+                if (isActive) {
+                    androidx.compose.material3.TextButton(onClick = { audioEngine.stop() }) {
+                        Text("LEAVE CHANNEL • DISCONNECT", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
             }
             // Quick Master Input Gain Control
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {

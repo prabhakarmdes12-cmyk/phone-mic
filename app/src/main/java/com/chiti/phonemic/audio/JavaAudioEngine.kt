@@ -113,10 +113,6 @@ class JavaAudioEngine(private val context: Context,
                             // AudioTrack paces receiver playout; lack of data renders limited silence.
                             if ((network?.incoming?.available() ?: 0) >= 480) network?.incoming?.poll(samples, 480) ?: 0
                             else {
-                                if (role == NetworkRole.WALKIE_TALKIE) {
-                                    java.util.concurrent.locks.LockSupport.park()
-                                    continue // Let the idle playback track enter standby; never open a microphone here.
-                                }
                                 samples.fill(0); 480
                             }
                         }
@@ -163,7 +159,7 @@ class JavaAudioEngine(private val context: Context,
         runCatching { track?.pause(); track?.flush() }
         runCatching { record?.stop() }
         worker?.let { java.util.concurrent.locks.LockSupport.unpark(it) }
-        worker?.join()
+        worker?.join(500)
         if (role == NetworkRole.WALKIE_TALKIE) network?.playbackThread = null
         runCatching { record?.release() }; record = null
         runCatching { track?.release() }; track = null

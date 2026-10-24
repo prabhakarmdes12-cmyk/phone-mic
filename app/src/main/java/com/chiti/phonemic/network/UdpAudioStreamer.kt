@@ -75,17 +75,30 @@ class UdpAudioStreamer(private val context: Context? = null) {
 
         if (nic == null || !nic.isUp || !nic.supportsMulticast()) {
             // Fallback: search all available network interfaces for Wi-Fi, Hotspot, or local LAN
-            nic = NetworkInterface.getNetworkInterfaces()?.toList()?.firstOrNull { candidate ->
+            val allNics = runCatching {
+                NetworkInterface.getNetworkInterfaces()?.let { java.util.Collections.list(it) }
+            }.getOrNull() ?: emptyList()
+
+            nic = allNics.firstOrNull { candidate ->
                 try {
+                    val addrs = java.util.Collections.list(candidate.inetAddresses)
                     candidate.isUp && !candidate.isLoopback && candidate.supportsMulticast() &&
                         (candidate.name.startsWith("wlan") || candidate.name.startsWith("ap") || 
                          candidate.name.startsWith("swlan") || candidate.name.startsWith("rndis") ||
-                         candidate.inetAddresses.any { !it.isLoopbackAddress && it is java.net.Inet4Address })
+                         addrs.any { !it.isLoopbackAddress && it is java.net.Inet4Address && it.isSiteLocalAddress })
+                } catch (_: Exception) { false }
+            } ?: allNics.firstOrNull { candidate ->
+                try {
+                    val addrs = java.util.Collections.list(candidate.inetAddresses)
+                    candidate.isUp && !candidate.isLoopback &&
+                        (candidate.name.startsWith("wlan") || candidate.name.startsWith("ap") || 
+                         candidate.name.startsWith("swlan") || candidate.name.startsWith("rndis") ||
+                         addrs.any { !it.isLoopbackAddress && it is java.net.Inet4Address && it.isSiteLocalAddress })
                 } catch (_: Exception) { false }
             }
         }
         val targetNic = nic ?: error("Active Wi-Fi or Mobile Hotspot required for Walkie-Talkie")
-        val localAddresses = targetNic.inetAddresses.toList().toTypedArray()
+        val localAddresses = java.util.Collections.list(targetNic.inetAddresses).toTypedArray()
         val wifi = app.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
         try {
             multicastLock = runCatching {
@@ -95,7 +108,11 @@ class UdpAudioStreamer(private val context: Context? = null) {
             sock.reuseAddress = true; sock.bind(InetSocketAddress(port)); sock.soTimeout = 2
             runCatching { sock.networkInterface = targetNic }
             sock.timeToLive = 1; sock.loopbackMode = true
-            sock.joinGroup(InetSocketAddress(groupAddress, port), targetNic)
+            try {
+                sock.joinGroup(InetSocketAddress(groupAddress, port), targetNic)
+            } catch (_: Exception) {
+                runCatching { sock.joinGroup(groupAddress) }
+            }
             walkie = true
             launch(sock, groupAddress, port, true, localAddresses)
         } catch (e: Exception) { socket?.close(); releaseLock(); throw e }
@@ -223,7 +240,7 @@ class UdpAudioStreamer(private val context: Context? = null) {
                     if (!transmitting) {
                         while (outgoing.available() > 0) outgoing.poll(pcm)
                         // Recheck after draining to avoid sleeping through a racing key-down wakeup.
-                        if (!transmitting && running) LockSupport.park()
+                        if (!transmitting && running) LockSupport.parkNanos(20_000_000L)
                         continue
                     }
                     if (epoch != transmissionEpoch) {
@@ -252,7 +269,7 @@ class UdpAudioStreamer(private val context: Context? = null) {
     fun stop() {
         transmitting = false; running = false; socket?.close(); socket = null
         groupSender?.let { LockSupport.unpark(it) }
-        worker?.join(); worker = null
-        groupSender?.join(); groupSender = null; releaseLock()
+        worker?.join(500); worker = null
+        groupSender?.join(500); groupSender = null; releaseLock()
     }
 }
