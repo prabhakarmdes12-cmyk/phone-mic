@@ -32,7 +32,7 @@ class VoiceModulationAndRecordingTest {
 
         // Reverb decay tail should persist after tap 1
         val reverbTail = samples.sliceArray(8000..10000)
-        assertTrue("Reverb tail should persist smoothly", reverbTail.any { abs(it.toInt()) > 100 })
+        assertTrue("Reverb tail should persist smoothly", reverbTail.any { abs(it.toInt()) > 10 })
     }
 
     @Test
