@@ -199,20 +199,27 @@
     }
 
     /* ── Sticky Header ── */
+    /* ── Sticky Header (Two-Tier Modern Architecture) ── */
     header {
       position: sticky;
       top: 0;
       z-index: 100;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      background: rgba(7, 10, 17, 0.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      background: rgba(7, 10, 17, 0.92);
       border-bottom: 1px solid var(--border-subtle);
+      transition: background 0.3s ease;
     }
 
-    .nav-container {
+    /* Tier 1: Top Bar (Brand & Action Buttons) */
+    .nav-top-bar {
+      padding: 10px 0;
+    }
+
+    .nav-top-container {
       max-width: 1180px;
       margin: 0 auto;
-      padding: 12px 24px;
+      padding: 0 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -229,8 +236,8 @@
     }
 
     .brand-icon {
-      width: 40px;
-      height: 40px;
+      width: 38px;
+      height: 38px;
       background: linear-gradient(135deg, #8B5CF6, #38BDF8);
       border-radius: var(--radius-sm);
       display: flex;
@@ -269,37 +276,127 @@
       box-shadow: 0 0 8px var(--accent-emerald);
     }
 
-    .nav-links {
-      display: none;
+    .nav-actions {
+      display: flex;
       align-items: center;
-      gap: 22px;
-      list-style: none;
+      gap: 10px;
+      flex-shrink: 0;
     }
 
-    @media (min-width: 890px) {
-      .nav-links {
-        display: flex;
-      }
+    .nav-action-btn {
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+    }
+
+    .btn-stable-pill {
+      border-color: rgba(62, 207, 142, 0.45) !important;
+      color: #3ecf8e !important;
+    }
+
+    .btn-stable-pill:hover {
+      border-color: rgba(62, 207, 142, 0.8) !important;
+      background: rgba(62, 207, 142, 0.1) !important;
+      color: #5ef3b1 !important;
+    }
+
+    /* Tier 2: Sub-Nav Bar (Navigation Links & Status Badge) */
+    .nav-sub-bar {
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+      background: rgba(10, 14, 24, 0.65);
+    }
+
+    .nav-sub-container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .nav-sub-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      flex-shrink: 0;
     }
 
     .nav-link {
       color: var(--text-muted);
       text-decoration: none;
-      font-size: 0.92rem;
+      font-size: 0.86rem;
       font-weight: 600;
+      white-space: nowrap;
       transition: color 0.2s ease;
       position: relative;
+      display: inline-flex;
+      align-items: center;
+      padding: 10px 0;
+    }
+
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--brand-bright), #38bdf8);
+      border-radius: 2px;
+      transform: scaleX(0);
+      transform-origin: center;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .nav-link:hover {
       color: var(--text-main);
     }
 
-    .nav-actions {
-      display: flex;
+    .nav-link:hover::after,
+    .nav-link:focus-visible::after {
+      transform: scaleX(1);
+    }
+
+    .nav-sub-badge {
+      display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      color: #94a3b8;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
       flex-shrink: 0;
+    }
+
+    .nav-sub-pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+      animation: pulse-glow 2.5s infinite ease-in-out;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
     }
 
     /* Accessibility Icon Button in Header */
@@ -334,15 +431,6 @@
       display: inline;
     }
 
-    @media (max-width: 540px) {
-      .a11y-btn-text {
-        display: none;
-      }
-      .btn-a11y {
-        padding: 8px 10px;
-      }
-    }
-
     .btn-nav {
       background: linear-gradient(135deg, var(--brand-bright), var(--brand));
       color: var(--text-inverted);
@@ -357,11 +445,118 @@
       transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
       box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
       min-height: 40px;
+      white-space: nowrap;
     }
 
     .btn-nav:hover {
       transform: translateY(-2px);
       box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
+    }
+
+    .btn-stable-text-short,
+    .btn-download-text-short {
+      display: none;
+    }
+
+    /* ── Responsive Header Layout Breakpoints ── */
+    @media (max-width: 960px) {
+      .nav-sub-badge {
+        display: none;
+      }
+      .nav-links {
+        gap: 20px;
+      }
+      .btn-text-github {
+        display: none;
+      }
+    }
+
+    @media (max-width: 820px) {
+      .a11y-btn-text {
+        display: none;
+      }
+      .btn-a11y {
+        padding: 8px 10px;
+        min-height: 38px;
+      }
+      .btn-stable-text-long,
+      .btn-download-text-long {
+        display: none !important;
+      }
+      .btn-stable-text-short,
+      .btn-download-text-short {
+        display: inline !important;
+      }
+      .nav-top-container {
+        gap: 8px;
+      }
+      .btn-nav {
+        padding: 8px 14px;
+        font-size: 0.84rem;
+        min-height: 38px;
+      }
+    }
+
+    @media (max-width: 580px) {
+      #navStableBtn {
+        display: none !important;
+      }
+      .btn-nav-github {
+        display: none !important;
+      }
+      .nav-top-bar {
+        padding: 8px 0;
+      }
+      .nav-top-container {
+        padding: 0 14px;
+        gap: 6px;
+      }
+      .nav-sub-container {
+        padding: 0 14px;
+      }
+      .nav-links {
+        gap: 16px;
+      }
+      .nav-link {
+        font-size: 0.82rem;
+        padding: 8px 0;
+      }
+      .brand-text h1 {
+        font-size: 1.12rem;
+      }
+      .brand-tag {
+        font-size: 0.62rem;
+      }
+      .brand-icon {
+        width: 34px;
+        height: 34px;
+      }
+      .brand-icon svg {
+        width: 20px;
+        height: 20px;
+      }
+      .btn-a11y {
+        padding: 6px 9px;
+        min-height: 34px;
+      }
+      .nav-action-btn {
+        padding: 6px 9px;
+        min-height: 34px;
+      }
+      .btn-nav {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        min-height: 34px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .brand-text h1 {
+        font-size: 1.05rem;
+      }
+      .brand-tag {
+        font-size: 0.6rem;
+      }
     }
 
     /* ── Main Container ── */
@@ -1729,73 +1924,88 @@
   <canvas id="heroCanvas" aria-hidden="true"></canvas>
   <div class="ambient-glow" aria-hidden="true"></div>
 
-  <!-- Header -->
+  <!-- Header (Two-Tier Modern Architecture) -->
   <header role="banner">
-    <div class="nav-container">
-      <a href="#" class="brand" aria-label="PhoneMic Home">
-        <div class="brand-icon" aria-hidden="true">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-            <line x1="12" x2="12" y1="19" y2="22"/>
-          </svg>
-        </div>
-        <div class="brand-text">
-          <h1>PhoneMic</h1>
-          <div class="brand-tag">
-            <span class="brand-tag-dot"></span>
-            <span>FREE PUBLIC BETA</span>
+    <!-- Line 1: Main Brand & Action Controls -->
+    <div class="nav-top-bar">
+      <div class="nav-top-container">
+        <a href="#" class="brand" aria-label="PhoneMic Home">
+          <div class="brand-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" x2="12" y1="19" y2="22"/>
+            </svg>
           </div>
+          <div class="brand-text">
+            <h1>PhoneMic</h1>
+            <div class="brand-tag">
+              <span class="brand-tag-dot"></span>
+              <span>FREE PUBLIC BETA</span>
+            </div>
+          </div>
+        </a>
+
+        <div class="nav-actions">
+          <!-- Visible WCAG AAA Accessibility Controller Button -->
+          <button id="a11yToggleBtn" class="btn-a11y" aria-label="Open accessibility options (motion, contrast, text size)" aria-haspopup="dialog" aria-expanded="false" aria-controls="a11yModal">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="4.5" r="2.5"/>
+              <path d="M4 8.5h16"/>
+              <path d="M12 8.5v7"/>
+              <path d="m8 20 4-4.5 4 4.5"/>
+            </svg>
+            <span class="a11y-btn-text">Accessibility</span>
+          </button>
+
+          <a href="https://github.com/prabhakarmdes12-cmyk/phone-mic" target="_blank" rel="noopener" class="btn-secondary nav-action-btn btn-nav-github" aria-label="View PhoneMic on GitHub">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"/>
+            </svg>
+            <span class="btn-text-github">GitHub</span>
+          </a>
+
+          <a href="app-v1.0-stable.apk" class="btn-secondary nav-action-btn btn-stable-pill" id="navStableBtn" download="PhoneMic-v1.0-stable.apk" aria-label="Download v1.0 Original Stable APK">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" x2="12" y1="15" y2="3"/>
+            </svg>
+            <span class="btn-stable-text-long">v1.0 Stable</span>
+            <span class="btn-stable-text-short">v1.0</span>
+          </a>
+
+          <a href="app-debug.apk" class="btn-nav" id="navDownloadBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" x2="12" y1="15" y2="3"/>
+            </svg>
+            <span class="btn-download-text-long">Download v1.2</span>
+            <span class="btn-download-text-short">v1.2</span>
+          </a>
         </div>
-      </a>
+      </div>
+    </div>
 
-      <nav aria-label="Main Navigation">
-        <ul class="nav-links">
-          <li><a href="#demo" class="nav-link">Try Demo</a></li>
-          <li><a href="#mesh" class="nav-link">Multi-Phone Mesh</a></li>
-          <li><a href="#scenarios" class="nav-link">Everyday Uses</a></li>
-          <li><a href="#manifesto" class="nav-link">Our Promise</a></li>
-          <li><a href="#comparison" class="nav-link">Compare</a></li>
-          <li><a href="#specs" class="nav-link">Under the Hood</a></li>
-        </ul>
-      </nav>
+    <!-- Line 2: Navigation Links Sub-Bar -->
+    <div class="nav-sub-bar">
+      <div class="nav-sub-container">
+        <nav aria-label="Main Navigation">
+          <ul class="nav-links">
+            <li><a href="#demo" class="nav-link">Try Demo</a></li>
+            <li><a href="#mesh" class="nav-link">Multi-Phone Mesh</a></li>
+            <li><a href="#scenarios" class="nav-link">Everyday Uses</a></li>
+            <li><a href="#manifesto" class="nav-link">Our Promise</a></li>
+            <li><a href="#comparison" class="nav-link">Compare</a></li>
+            <li><a href="#specs" class="nav-link">Under the Hood</a></li>
+          </ul>
+        </nav>
 
-      <div class="nav-actions">
-        <!-- Visible WCAG AAA Accessibility Controller Button -->
-        <button id="a11yToggleBtn" class="btn-a11y" aria-label="Open accessibility options (motion, contrast, text size)" aria-haspopup="dialog" aria-expanded="false" aria-controls="a11yModal">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="4.5" r="2.5"/>
-            <path d="M4 8.5h16"/>
-            <path d="M12 8.5v7"/>
-            <path d="m8 20 4-4.5 4 4.5"/>
-          </svg>
-          <span class="a11y-btn-text">Accessibility</span>
-        </button>
-
-        <a href="https://github.com/prabhakarmdes12-cmyk/phone-mic" target="_blank" rel="noopener" class="btn-secondary" style="padding: 8px 16px; font-size: 0.85rem;" aria-label="View PhoneMic on GitHub">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"/>
-          </svg>
-          <span>GitHub</span>
-        </a>
-
-        <a href="app-v1.0-stable.apk" class="btn-secondary" id="navStableBtn" style="padding: 8px 14px; font-size: 0.85rem; border-color: rgba(62, 207, 142, 0.45); color: #3ecf8e;" download="PhoneMic-v1.0-stable.apk" aria-label="Download v1.0 Original Stable APK">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" x2="12" y1="15" y2="3"/>
-          </svg>
-          <span>v1.0 Stable</span>
-        </a>
-
-        <a href="app-debug.apk" class="btn-nav" id="navDownloadBtn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" x2="12" y1="15" y2="3"/>
-          </svg>
-          <span>Download v1.2</span>
-        </a>
+        <div class="nav-sub-badge" aria-hidden="true">
+          <span class="nav-sub-pulse"></span>
+          <span>Zero-Cloud P2P Mesh</span>
+        </div>
       </div>
     </div>
   </header>
