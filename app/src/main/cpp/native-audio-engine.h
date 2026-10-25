@@ -48,14 +48,15 @@ struct BiquadFilter {
     void reset() { z1 = 0.0f; z2 = 0.0f; }
 };
 
-class NativeAudioEngine : public oboe::AudioStreamDataCallback {
+class NativeAudioEngine : public oboe::AudioStreamDataCallback,
+                          public oboe::AudioStreamErrorCallback {
 public:
     NativeAudioEngine();
     virtual ~NativeAudioEngine();
 
     bool start();
     void stop();
-    bool isRunning() const { return isRunning_.load(); }
+    bool isRunning() const { return isRunning_.load() && !isStopping_.load(); }
 
     void setInputGain(float gainDb);
     void setMuted(bool muted);
@@ -67,7 +68,7 @@ public:
     bool isFeedbackActive() const { return isFeedbackDetected_.load(std::memory_order_relaxed); }
     int64_t getUnderrunCount() const;
 
-    size_t readProcessed(float* data, size_t count) { return recordBuffer_.read(data, count); }
+    size_t readProcessed(float* data, size_t count);
     void triggerSound(int effect) { soundRequest_.store(((soundRequest_.load() + 4) & ~3) | effect); }
     float nextSound();
     void setBgmTrack(int trackId);
@@ -75,16 +76,23 @@ public:
     float nextBgm();
     void setAutoDuckingEnabled(bool enabled);
     bool isAutoDuckingEnabled() const { return autoDucking_.load(std::memory_order_relaxed); }
-    // Oboe Callbacks
+
+    // Oboe Data Callback
     oboe::DataCallbackResult onAudioReady(
         oboe::AudioStream* stream,
         void* audioData,
         int32_t numFrames) override;
 
+    // Oboe Error Callbacks
+    void onErrorBeforeClose(oboe::AudioStream* stream, oboe::Result error) override;
+    void onErrorAfterClose(oboe::AudioStream* stream, oboe::Result error) override;
+
 private:
     bool openStreams();
     void closeStreams();
     void processDsp(float* buffer, int32_t numFrames);
+
+    std::atomic<bool> isStopping_{false};
 
     std::shared_ptr<oboe::AudioStream> inputStream_;
     std::shared_ptr<oboe::AudioStream> outputStream_;

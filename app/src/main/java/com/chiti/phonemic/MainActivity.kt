@@ -104,6 +104,7 @@ import com.chiti.phonemic.model.NetworkRole
 import com.chiti.phonemic.bluetooth.BluetoothAudioRouter
 import com.chiti.phonemic.model.VoicePreset
 import com.chiti.phonemic.model.ScenarioProfile
+import com.chiti.phonemic.model.AudioEnginePreference
 import kotlinx.coroutines.launch
 
 enum class MicOperationMode(val label: String, val iconDescription: String) {
@@ -1137,6 +1138,55 @@ fun PhoneMicScreen(
                         Column {
                             Text("Active Audio Stack", fontSize = 11.sp, color = Color(0xFF9DA3AF), fontWeight = FontWeight.SemiBold)
                             Text(audioEngine.activeEngineName, fontSize = 13.sp, color = Color(0xFF00D5FF), fontWeight = FontWeight.Bold)
+                        }
+
+                        Column {
+                            Text("Audio Engine Pipeline", fontSize = 11.sp, color = Color(0xFF9DA3AF), fontWeight = FontWeight.SemiBold)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            val currentEnginePref by audioEngine.enginePreference.collectAsState()
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                AudioEnginePreference.ALL.forEach { prefOption ->
+                                    val isSelected = prefOption == currentEnginePref
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) Color(0xFF261D3B) else Color(0xFF1E2024))
+                                            .border(
+                                                width = 1.dp,
+                                                color = if (isSelected) Color(0xFF9955FF) else Color(0xFF2A2D35),
+                                                shape = RoundedCornerShape(8.dp)
+                                            )
+                                            .clickable {
+                                                audioEngine.setEnginePreference(prefOption)
+                                                runCatching { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+                                            }
+                                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(10.dp)
+                                                .clip(CircleShape)
+                                                .background(if (isSelected) Color(0xFF9955FF) else Color(0xFF4B5563))
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(
+                                                text = prefOption.label,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) Color.White else Color(0xFFD1D5DB)
+                                            )
+                                            Text(
+                                                text = prefOption.description,
+                                                fontSize = 10.sp,
+                                                color = if (isSelected) Color(0xFFC499FF) else Color(0xFF9DA3AF)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
 
                         Column {

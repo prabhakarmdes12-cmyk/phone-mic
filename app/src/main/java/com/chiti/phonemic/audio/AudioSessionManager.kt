@@ -7,10 +7,12 @@ import android.media.*
 import com.chiti.phonemic.model.NetworkRole
 import com.chiti.phonemic.model.ScenarioProfile
 import com.chiti.phonemic.network.*
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.chiti.phonemic.bluetooth.BluetoothAudioRouter
+import com.chiti.phonemic.model.AudioEnginePreference
 import com.chiti.phonemic.service.MicForegroundService
 import java.io.File
 import java.net.InetAddress
@@ -26,7 +28,10 @@ class AudioSessionManager private constructor(private val context: Context) : Au
             instance ?: AudioSessionManager(context.applicationContext).also { instance = it }
         }
     }
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        android.util.Log.e("AudioSessionManager", "Uncaught exception in AudioSessionManager scope", throwable)
+    }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + exceptionHandler)
     private val state = MutableStateFlow<AudioState>(AudioState.Idle)
     override val audioState = state.asStateFlow()
     private val rms = MutableStateFlow(-96f)
@@ -198,11 +203,25 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         playRecordingFile(file)
     }
 
+    private val prefs = context.getSharedPreferences("phonemic_engine_prefs", Context.MODE_PRIVATE)
+    private val _enginePreference = MutableStateFlow(
+        runCatching {
+            val name = prefs.getString("preferred_audio_engine", AudioEnginePreference.AUTO.name)
+            AudioEnginePreference.valueOf(name ?: AudioEnginePreference.AUTO.name)
+        }.getOrDefault(AudioEnginePreference.AUTO)
+    )
+    val enginePreference = _enginePreference.asStateFlow()
+
+    fun setEnginePreference(pref: AudioEnginePreference) {
+        _enginePreference.value = pref
+        prefs.edit().putString("preferred_audio_engine", pref.name).apply()
+    }
+
     private var engine: AudioEngine? = null
     val activeEngineName: String
         get() = when (engine) {
             is NativeAudioEngine -> "Native C++ (Oboe / AAudio)"
-            is JavaAudioEngine -> "Platform Fallback (AudioRecord)"
+            is JavaAudioEngine -> "Platform Java (AudioRecord)"
             else -> "Ready (Auto)"
         }
     private var meters: Job? = null
@@ -265,26 +284,31 @@ class AudioSessionManager private constructor(private val context: Context) : Au
         } catch (e: Exception) {
             closeEngine(); state.value = AudioState.Error("Cannot start Wi-Fi audio: ${e.message}"); return false
         }
-        try {
-            if (selectedRole.value == NetworkRole.STANDALONE) candidate = NativeAudioEngine(recorder)
-            candidate?.setVoicePreset(preset)
-            candidate?.setFeedbackSuppression(feedbackSuppressionEnabled)
-            candidate?.setBgmTrack(selectedBgmTrack.value)
-            candidate?.setBgmVolume(selectedBgmVolume.value)
-            candidate?.setAutoDucking(selectedAutoDucking.value)
-            val currentCandidate = candidate
-            if (currentCandidate != null && !currentCandidate.start(deviceName, gain)) {
-                runCatching { currentCandidate.stop() }
+        val pref = _enginePreference.value
+        val shouldTryNative = when (pref) {
+            AudioEnginePreference.PLATFORM_JAVA -> false
+            AudioEnginePreference.NATIVE_OBOE -> selectedRole.value == NetworkRole.STANDALONE
+            AudioEnginePreference.AUTO -> selectedRole.value == NetworkRole.STANDALONE && Build.VERSION.SDK_INT > Build.VERSION_CODES.R
+        }
+        if (shouldTryNative) {
+            try {
+                candidate = NativeAudioEngine(recorder)
+                candidate.setVoicePreset(preset)
+                candidate.setFeedbackSuppression(feedbackSuppressionEnabled)
+                candidate.setBgmTrack(selectedBgmTrack.value)
+                candidate.setBgmVolume(selectedBgmVolume.value)
+                candidate.setAutoDucking(selectedAutoDucking.value)
+                val currentCandidate = candidate
+                if (!currentCandidate.start(deviceName, gain)) {
+                    runCatching { currentCandidate.stop() }
+                    candidate = null
+                }
+            } catch (t: Throwable) {
+                android.util.Log.w("AudioSessionManager", "Native audio engine unavailable or failed to start, falling back to Platform Java engine", t)
+                val failedCandidate = candidate
+                runCatching { failedCandidate?.stop() }
                 candidate = null
             }
-        } catch (_: LinkageError) {
-            val failedCandidate = candidate
-            runCatching { failedCandidate?.stop() }
-            candidate = null
-        } catch (_: Exception) {
-            val failedCandidate = candidate
-            runCatching { failedCandidate?.stop() }
-            candidate = null
         }
         if (candidate == null) {
             val javaEng = JavaAudioEngine(context, selectedRole.value, network, recorder)

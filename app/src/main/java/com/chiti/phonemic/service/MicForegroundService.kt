@@ -52,7 +52,10 @@ class MicForegroundService : Service() {
         }
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        android.util.Log.e("MicForegroundService", "Uncaught exception in service scope", throwable)
+    }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + exceptionHandler)
     private val session by lazy { AudioSessionManager.get(this) }
     private var wakeLock: PowerManager.WakeLock? = null
     private var isMuted = false

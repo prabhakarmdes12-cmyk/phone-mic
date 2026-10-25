@@ -24,9 +24,12 @@ LockFreeAudioBuffer::LockFreeAudioBuffer(size_t capacity) {
 }
 
 size_t LockFreeAudioBuffer::write(const float* data, size_t count) {
+    if (!data || count == 0) return 0;
     size_t w = writeIndex_.load(std::memory_order_relaxed);
     size_t r = readIndex_.load(std::memory_order_acquire);
-    size_t available = capacity_ - (w - r);
+    size_t used = (w >= r) ? (w - r) : 0;
+    if (used > capacity_) used = capacity_;
+    size_t available = capacity_ - used;
     size_t toWrite = std::min(count, available);
 
     for (size_t i = 0; i < toWrite; ++i) {
@@ -38,9 +41,11 @@ size_t LockFreeAudioBuffer::write(const float* data, size_t count) {
 }
 
 size_t LockFreeAudioBuffer::read(float* data, size_t count) {
+    if (!data || count == 0) return 0;
     size_t r = readIndex_.load(std::memory_order_relaxed);
     size_t w = writeIndex_.load(std::memory_order_acquire);
-    size_t available = w - r;
+    size_t available = (w >= r) ? (w - r) : 0;
+    if (available > capacity_) available = capacity_;
     size_t toRead = std::min(count, available);
 
     for (size_t i = 0; i < toRead; ++i) {
@@ -54,13 +59,14 @@ size_t LockFreeAudioBuffer::read(float* data, size_t count) {
 size_t LockFreeAudioBuffer::availableRead() const {
     size_t w = writeIndex_.load(std::memory_order_acquire);
     size_t r = readIndex_.load(std::memory_order_relaxed);
-    return w - r;
+    return (w >= r) ? (w - r) : 0;
 }
 
 size_t LockFreeAudioBuffer::availableWrite() const {
     size_t w = writeIndex_.load(std::memory_order_relaxed);
     size_t r = readIndex_.load(std::memory_order_acquire);
-    return capacity_ - (w - r);
+    size_t used = (w >= r) ? (w - r) : 0;
+    return (used < capacity_) ? (capacity_ - used) : 0;
 }
 
 void LockFreeAudioBuffer::reset() {
@@ -73,11 +79,13 @@ void LockFreeAudioBuffer::reset() {
 // BiquadFilter Formulas
 // -------------------------------------------------------------
 void BiquadFilter::setHighPass(float sampleRate, float cutoffHz, float q) {
+    if (sampleRate <= 0.0f || cutoffHz <= 0.0f || q <= 0.0f) return;
     float omega = 2.0f * M_PI * cutoffHz / sampleRate;
     float alpha = sinf(omega) / (2.0f * q);
     float cosw = cosf(omega);
 
     float a0 = 1.0f + alpha;
+    if (std::fabs(a0) < 1e-6f) return;
     b0 = ((1.0f + cosw) / 2.0f) / a0;
     b1 = (-(1.0f + cosw)) / a0;
     b2 = ((1.0f + cosw) / 2.0f) / a0;
@@ -86,12 +94,14 @@ void BiquadFilter::setHighPass(float sampleRate, float cutoffHz, float q) {
 }
 
 void BiquadFilter::setPeaking(float sampleRate, float centerHz, float gainDb, float q) {
+    if (sampleRate <= 0.0f || centerHz <= 0.0f || q <= 0.0f) return;
     float A = powf(10.0f, gainDb / 40.0f);
     float omega = 2.0f * M_PI * centerHz / sampleRate;
     float alpha = sinf(omega) / (2.0f * q);
     float cosw = cosf(omega);
 
     float a0 = 1.0f + alpha / A;
+    if (std::fabs(a0) < 1e-6f) return;
     b0 = (1.0f + alpha * A) / a0;
     b1 = (-2.0f * cosw) / a0;
     b2 = (1.0f - alpha * A) / a0;
@@ -100,16 +110,19 @@ void BiquadFilter::setPeaking(float sampleRate, float centerHz, float gainDb, fl
 }
 
 void BiquadFilter::setNotch(float sampleRate, float notchHz, float q) {
+    if (sampleRate <= 0.0f || notchHz <= 0.0f || q <= 0.0f) return;
     float omega = 2.0f * M_PI * notchHz / sampleRate;
     float alpha = sinf(omega) / (2.0f * q);
     float cosw = cosf(omega);
 
     float a0 = 1.0f + alpha;
+    if (std::fabs(a0) < 1e-6f) return;
     b0 = 1.0f / a0;
     b1 = (-2.0f * cosw) / a0;
     b2 = 1.0f / a0;
     a1 = (-2.0f * cosw) / a0;
     a2 = (1.0f - alpha) / a0;
+    reset(); // Reset delay memory on frequency shift to avoid resonance spikes
 }
 
 // -------------------------------------------------------------
@@ -155,9 +168,24 @@ bool NativeAudioEngine::start() {
 }
 
 void NativeAudioEngine::stop() {
-    isRunning_.store(false);
+    isStopping_.store(true, std::memory_order_release);
+    isRunning_.store(false, std::memory_order_release);
     closeStreams();
+    isStopping_.store(false, std::memory_order_release);
     LOGI("Audio Engine stopped");
+}
+
+void NativeAudioEngine::onErrorBeforeClose(oboe::AudioStream* stream, oboe::Result error) {
+    LOGW("Oboe onErrorBeforeClose: %s", oboe::convertToText(error));
+}
+
+void NativeAudioEngine::onErrorAfterClose(oboe::AudioStream* stream, oboe::Result error) {
+    LOGW("Oboe onErrorAfterClose: %s", oboe::convertToText(error));
+}
+
+size_t NativeAudioEngine::readProcessed(float* data, size_t count) {
+    if (!data || count == 0 || isStopping_.load(std::memory_order_relaxed)) return 0;
+    return recordBuffer_.read(data, count);
 }
 
 bool NativeAudioEngine::openStreams() {
@@ -170,11 +198,13 @@ bool NativeAudioEngine::openStreams() {
              ->setFormat(oboe::AudioFormat::Float)
              ->setChannelCount(oboe::ChannelCount::Mono)
              ->setInputPreset(oboe::InputPreset::VoiceCommunication)
-             ->setDataCallback(this);
+             ->setDataCallback(this)
+             ->setErrorCallback(this);
 
     oboe::Result res = inBuilder.openStream(inputStream_);
     if (res != oboe::Result::OK) {
         LOGW("Failed to open Float input stream (%s), attempting I16 fallback...", oboe::convertToText(res));
+        inputStream_.reset();
         inBuilder.setFormat(oboe::AudioFormat::I16);
         res = inBuilder.openStream(inputStream_);
     }
@@ -197,11 +227,13 @@ bool NativeAudioEngine::openStreams() {
               ->setUsage(oboe::Usage::Media)
               ->setContentType(oboe::ContentType::Speech)
               ->setSampleRate(static_cast<int32_t>(sampleRate_))
-              ->setDataCallback(this);
+              ->setDataCallback(this)
+              ->setErrorCallback(this);
 
     res = outBuilder.openStream(outputStream_);
     if (res != oboe::Result::OK) {
         LOGW("Failed to open Float output stream (%s), attempting I16 fallback...", oboe::convertToText(res));
+        outputStream_.reset();
         outBuilder.setFormat(oboe::AudioFormat::I16);
         res = outBuilder.openStream(outputStream_);
     }
@@ -520,6 +552,7 @@ void NativeAudioEngine::processDsp(float* buffer, int32_t numFrames) {
             bgm *= duckGain_;
         }
         float totalMix = yProcessed + nextSound() + bgm;
+        if (std::isnan(totalMix) || std::isinf(totalMix)) totalMix = 0.0f;
         float yLimited = std::clamp(totalMix, -ceiling, ceiling);
 
         buffer[i] = yLimited;
@@ -572,6 +605,12 @@ oboe::DataCallbackResult NativeAudioEngine::onAudioReady(
     void* audioData,
     int32_t numFrames) {
 
+    if (!audioData || numFrames <= 0 || isStopping_.load(std::memory_order_acquire) || !ringBuffer_) {
+        return oboe::DataCallbackResult::Continue;
+    }
+
+    const int32_t channels = stream->getChannelCount();
+
     if (stream->getDirection() == oboe::Direction::Input) {
         if (stream->getFormat() == oboe::AudioFormat::I16) {
             auto* intData = static_cast<const int16_t*>(audioData);
@@ -580,16 +619,36 @@ oboe::DataCallbackResult NativeAudioEngine::onAudioReady(
             while (processed < numFrames) {
                 int32_t chunk = std::min(numFrames - processed, 512);
                 for (int32_t i = 0; i < chunk; ++i) {
-                    conv[i] = static_cast<float>(intData[processed + i]) / 32768.0f;
+                    if (channels >= 2) {
+                        float left = static_cast<float>(intData[(processed + i) * channels]) / 32768.0f;
+                        float right = static_cast<float>(intData[(processed + i) * channels + 1]) / 32768.0f;
+                        conv[i] = (left + right) * 0.5f;
+                    } else {
+                        conv[i] = static_cast<float>(intData[processed + i]) / 32768.0f;
+                    }
                 }
                 ringBuffer_->write(conv, static_cast<size_t>(chunk));
                 processed += chunk;
             }
         } else {
-            auto* floatData = static_cast<float*>(audioData);
-            ringBuffer_->write(floatData, static_cast<size_t>(numFrames));
+            auto* floatData = static_cast<const float*>(audioData);
+            if (channels >= 2) {
+                float conv[512];
+                int32_t processed = 0;
+                while (processed < numFrames) {
+                    int32_t chunk = std::min(numFrames - processed, 512);
+                    for (int32_t i = 0; i < chunk; ++i) {
+                        conv[i] = (floatData[(processed + i) * channels] + floatData[(processed + i) * channels + 1]) * 0.5f;
+                    }
+                    ringBuffer_->write(conv, static_cast<size_t>(chunk));
+                    processed += chunk;
+                }
+            } else {
+                ringBuffer_->write(floatData, static_cast<size_t>(numFrames));
+            }
         }
     } else {
+        // Output playback stream
         if (stream->getFormat() == oboe::AudioFormat::I16) {
             auto* intData = static_cast<int16_t*>(audioData);
             float conv[512];
@@ -603,20 +662,50 @@ oboe::DataCallbackResult NativeAudioEngine::onAudioReady(
                 processDsp(conv, chunk);
                 recordBuffer_.write(conv, static_cast<size_t>(chunk));
                 for (int32_t i = 0; i < chunk; ++i) {
-                    intData[processed + i] = static_cast<int16_t>(std::clamp(conv[i] * 32767.0f, -32768.0f, 32767.0f));
+                    float val = conv[i];
+                    if (std::isnan(val) || std::isinf(val)) val = 0.0f;
+                    int16_t s = static_cast<int16_t>(std::clamp(val * 32767.0f, -32768.0f, 32767.0f));
+                    if (channels >= 2) {
+                        intData[(processed + i) * channels] = s;
+                        intData[(processed + i) * channels + 1] = s;
+                    } else {
+                        intData[processed + i] = s;
+                    }
                 }
                 processed += chunk;
             }
         } else {
             auto* floatData = static_cast<float*>(audioData);
-            // Output playback stream
-            size_t readCount = ringBuffer_->read(floatData, static_cast<size_t>(numFrames));
-            if (readCount < static_cast<size_t>(numFrames)) {
-                // Buffer underrun: fill remaining frames with silence
-                std::fill(floatData + readCount, floatData + numFrames, 0.0f);
+            if (channels >= 2) {
+                float conv[512];
+                int32_t processed = 0;
+                while (processed < numFrames) {
+                    int32_t chunk = std::min(numFrames - processed, 512);
+                    size_t readCount = ringBuffer_->read(conv, static_cast<size_t>(chunk));
+                    if (readCount < static_cast<size_t>(chunk)) {
+                        std::fill(conv + readCount, conv + chunk, 0.0f);
+                    }
+                    processDsp(conv, chunk);
+                    recordBuffer_.write(conv, static_cast<size_t>(chunk));
+                    for (int32_t i = 0; i < chunk; ++i) {
+                        float val = conv[i];
+                        if (std::isnan(val) || std::isinf(val)) val = 0.0f;
+                        floatData[(processed + i) * channels] = val;
+                        floatData[(processed + i) * channels + 1] = val;
+                    }
+                    processed += chunk;
+                }
+            } else {
+                size_t readCount = ringBuffer_->read(floatData, static_cast<size_t>(numFrames));
+                if (readCount < static_cast<size_t>(numFrames)) {
+                    std::fill(floatData + readCount, floatData + numFrames, 0.0f);
+                }
+                processDsp(floatData, numFrames);
+                for (int32_t i = 0; i < numFrames; ++i) {
+                    if (std::isnan(floatData[i]) || std::isinf(floatData[i])) floatData[i] = 0.0f;
+                }
+                recordBuffer_.write(floatData, static_cast<size_t>(numFrames));
             }
-            processDsp(floatData, numFrames);
-            recordBuffer_.write(floatData, static_cast<size_t>(numFrames));
         }
     }
 
@@ -708,10 +797,17 @@ extern "C" JNIEXPORT jint JNICALL
 Java_com_chiti_phonemic_audio_NativeAudioEngine_nativeReadProcessed(JNIEnv* env, jobject, jlong handle, jshortArray target) {
     auto* engine = reinterpret_cast<phonemic::NativeAudioEngine*>(handle);
     if (!engine || !target) return 0;
+    jsize targetLen = env->GetArrayLength(target);
+    if (targetLen <= 0) return 0;
+    size_t maxRead = std::min(static_cast<size_t>(2048), static_cast<size_t>(targetLen));
     float data[2048];
     jshort pcm[2048];
-    const auto count = engine->readProcessed(data, std::min(2048, env->GetArrayLength(target)));
-    for (size_t i = 0; i < count; ++i) pcm[i] = static_cast<jshort>(data[i] * 32767);
+    const auto count = engine->readProcessed(data, maxRead);
+    for (size_t i = 0; i < count; ++i) {
+        float v = data[i];
+        if (std::isnan(v) || std::isinf(v)) v = 0.0f;
+        pcm[i] = static_cast<jshort>(std::clamp(v * 32767.0f, -32768.0f, 32767.0f));
+    }
     env->SetShortArrayRegion(target, 0, static_cast<jsize>(count), pcm);
     return static_cast<jint>(count);
 }

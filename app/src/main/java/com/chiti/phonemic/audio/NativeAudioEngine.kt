@@ -22,7 +22,10 @@ class NativeAudioEngine(private val recorder: WavAudioRecorder? = null) : AudioE
     }
 
     private var nativeHandle: Long = 0
-    private val scope = CoroutineScope(Dispatchers.Main.immediate)
+    private val handler = CoroutineExceptionHandler { _, throwable ->
+        android.util.Log.e("NativeAudioEngine", "Uncaught exception in native metering", throwable)
+    }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate + handler)
     private var meterJob: Job? = null
 
     private val _audioState = MutableStateFlow<AudioState>(AudioState.Idle)
