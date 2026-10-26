@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -502,6 +503,7 @@ fun PhoneMicScreen(
                                 micMode = mode
                                 runCatching { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
                             }
+                            .sizeIn(minWidth = 48.dp, minHeight = 44.dp)
                             .padding(horizontal = 20.dp, vertical = 8.dp)
                     ) {
                         Text(
@@ -902,6 +904,7 @@ fun PhoneMicScreen(
                                                     android.util.Log.e("PhoneMic", "Error selecting scenario ${profile.id}", e)
                                                 }
                                             }
+                                            .sizeIn(minWidth = 48.dp, minHeight = 44.dp)
                                             .padding(horizontal = 14.dp, vertical = 8.dp)
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -978,6 +981,7 @@ fun PhoneMicScreen(
                                                 audioEngine.setVoicePreset(preset.id)
                                                 runCatching { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
                                             }
+                                            .sizeIn(minWidth = 48.dp, minHeight = 44.dp)
                                             .padding(horizontal = 16.dp, vertical = 8.dp)
                                     ) {
                                         Text(
@@ -1132,7 +1136,7 @@ fun PhoneMicScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Column {
                             Text("App Version", fontSize = 11.sp, color = Color(0xFF9DA3AF), fontWeight = FontWeight.SemiBold)
-                            Text("v1.2.0-beta (Build 2) • Android 14 Ready", fontSize = 13.sp, color = Color(0xFFC499FF), fontWeight = FontWeight.Bold)
+                            Text("v1.2.0 (Build 2) • Android 14 Ready", fontSize = 13.sp, color = Color(0xFFC499FF), fontWeight = FontWeight.Bold)
                         }
 
                         Column {
@@ -1161,6 +1165,7 @@ fun PhoneMicScreen(
                                                 audioEngine.setEnginePreference(prefOption)
                                                 runCatching { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
                                             }
+                                            .sizeIn(minWidth = 48.dp, minHeight = 44.dp)
                                             .padding(horizontal = 10.dp, vertical = 8.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {

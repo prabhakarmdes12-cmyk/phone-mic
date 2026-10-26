@@ -16,6 +16,8 @@ PhoneMic is structured into four distinct, loosely coupled layers:
 3. **Device & Bluetooth Router Layer:** Interacts with `AudioManager` and `AudioDeviceInfo` to detect output routing and monitor connection stability.
 4. **Native Real-Time Audio Engine (C++ / Oboe):** Executes the capture loop, real-time DSP chain, lock-free ring buffering, and playback streaming with zero memory allocations on the audio thread.
 
+**Latency budget (mesh audio paths):** 30 ms jitter buffer with < 45 ms network-to-ear latency — an ultra-low latency ~45 ms acoustic budget (10 ms frame + 30 ms jitter buffer + DAC output). Bluetooth transport and capture warm-up add to this budget; sub-20 ms end-to-end latency is not claimed.
+
 ```
 ┌────────────────────────────────────────────────────────┐
 │               Jetpack Compose UI Layer                 │

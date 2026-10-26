@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PhoneMic — Free Wireless Microphone, 8-Mic Mixer & Walkie-Talkie App</title>
-  <meta name="description" content="Turn your Android phone into a live wireless microphone, mix up to 8 phones through one speaker, or use instant Wi-Fi walkie-talkie. Zero lag, ear safety protection, and no ads. Free public beta.">
+  <meta name="description" content="Turn your Android phone into a live wireless microphone, mix up to 8 phones through one speaker, or use instant Wi-Fi walkie-talkie. Ultra-low ~45 ms latency, ear safety protection, and no ads. Free public beta.">
   <meta name="theme-color" content="#070A11">
 
   <!-- Open Graph / Meta -->
@@ -34,7 +34,7 @@
       --text-main: #FFFFFF;           /* 21.0:1 on #070A11 (AAA) */
       --text-body: #E2E8F0;           /* 14.2:1 on #070A11 (AAA) */
       --text-muted: #CBD5E1;          /* 11.8:1 on #070A11 (AAA) */
-      --text-dim: #94A3B8;            /* 7.1:1 on #070A11 (AAA) */
+      --text-dim: #A0AEC0;            /* >= 7:1 on all card backgrounds (AAA, verified) */
       --text-inverted: #070A11;
 
       /* Brand Accents with Verified AAA Contrast on #070A11 */
@@ -413,7 +413,7 @@
       gap: 8px;
       cursor: pointer;
       transition: all 0.2s ease;
-      min-height: 40px;
+      min-height: 44px;
     }
 
     .btn-a11y:hover {
@@ -444,7 +444,7 @@
       gap: 8px;
       transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
       box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
-      min-height: 40px;
+      min-height: 44px;
       white-space: nowrap;
     }
 
@@ -477,7 +477,7 @@
       }
       .btn-a11y {
         padding: 8px 10px;
-        min-height: 38px;
+        min-height: 44px;
       }
       .btn-stable-text-long,
       .btn-download-text-long {
@@ -493,7 +493,7 @@
       .btn-nav {
         padding: 8px 14px;
         font-size: 0.84rem;
-        min-height: 38px;
+        min-height: 44px;
       }
     }
 
@@ -537,16 +537,16 @@
       }
       .btn-a11y {
         padding: 6px 9px;
-        min-height: 34px;
+        min-height: 44px;
       }
       .nav-action-btn {
         padding: 6px 9px;
-        min-height: 34px;
+        min-height: 44px;
       }
       .btn-nav {
         padding: 6px 12px;
         font-size: 0.8rem;
-        min-height: 34px;
+        min-height: 44px;
       }
     }
 
@@ -2453,7 +2453,7 @@
             <div class="mesh-badge walkie">MANY-TO-MANY • PTT INTERCOM</div>
             <h3>Instant Group Walkie-Talkie</h3>
             <p>
-              Turn any group of phones into a private Push-To-Talk radio network on your local Wi-Fi. Press and hold your phone's physical volume buttons to broadcast. Everyone on the channel hears your voice instantly with zero cloud lag and zero cellular data use.
+              Turn any group of phones into a private Push-To-Talk radio network on your local Wi-Fi. Press and hold your phone's physical volume buttons to broadcast. Everyone on the channel hears your voice with a 30 ms jitter buffer and &lt; 45 ms network-to-ear latency (~45 ms acoustic budget), zero cloud servers, and zero cellular data use.
             </p>
           </div>
           <div class="mesh-spec-box">
@@ -2836,7 +2836,7 @@
             </tr>
             <tr>
               <td>Sound Quality &amp; Latency</td>
-              <td>48 kHz Mono PCM16, 10ms frame, 30–60 ms adaptive jitter buffer, -0.5 dBFS limiter</td>
+              <td>48 kHz Mono PCM16, 10 ms frame, 30 ms jitter buffer (&lt; 45 ms network-to-ear, ~45 ms acoustic budget), -0.5 dBFS limiter</td>
             </tr>
             <tr>
               <td>Wi-Fi Mesh &amp; Hub Protocol</td>

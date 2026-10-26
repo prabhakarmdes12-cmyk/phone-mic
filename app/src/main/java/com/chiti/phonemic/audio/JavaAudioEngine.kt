@@ -35,6 +35,7 @@ class JavaAudioEngine(private val context: Context,
     private var track: AudioTrack? = null
     private var worker: Thread? = null
     private var meter: Job? = null
+    private val dsp = SpeechDsp(soundboard)
 
     override suspend fun start(outputDeviceName: String, initialGainDb: Float): Boolean {
         if (running) return true
@@ -91,7 +92,6 @@ class JavaAudioEngine(private val context: Context,
                 stop(); state.value = AudioState.Error("Audio hardware initialization failed"); return false
             }
             val samples = ShortArray(480)
-            val dsp = SpeechDsp(soundboard)
             setInputGain(initialGainDb)
             if (input != null) {
                 runCatching { input.startRecording() }
@@ -146,7 +146,12 @@ class JavaAudioEngine(private val context: Context,
                 } finally { running = false }
             }, "PhoneMic-PCM").also { it.start() }
             meter = CoroutineScope(Dispatchers.Default).launch {
-                while (isActive) { rms.value = rmsValue; peak.value = peakValue; delay(33) }
+                while (isActive) {
+                    rms.value = rmsValue
+                    peak.value = peakValue
+                    feedback.value = dsp.isFeedbackActive
+                    delay(33)
+                }
             }
             true
         } catch (e: Exception) {
@@ -171,7 +176,9 @@ class JavaAudioEngine(private val context: Context,
     override fun setMuted(muted: Boolean, reason: MuteReason) { if (muted) stop() }
     override fun setInputGain(gainDb: Float) { gain = 10f.pow(gainDb.coerceIn(-12f, 12f) / 20f) }
     override fun setVoicePreset(presetId: Int) { preset = presetId.coerceIn(0, 8) }
-    override fun setFeedbackSuppression(enabled: Boolean) = Unit // No adaptive notch in fallback.
+    override fun setFeedbackSuppression(enabled: Boolean) {
+        dsp.setFeedbackSuppression(enabled)
+    }
     override fun getUnderrunCount(): Long = track?.underrunCount?.toLong() ?: 0L
     override fun setBgmTrack(trackId: Int) { soundboard.setBgmTrack(trackId) }
     override fun setBgmVolume(volume: Float) { soundboard.setBgmVolume(volume) }

@@ -105,6 +105,7 @@ fun SessionTools(
                             .clip(RoundedCornerShape(14.dp))
                             .background(if (isSelected) Color(0xFF9955FF) else Color(0xFF1F222C))
                             .clickable(enabled = !busy) { session.setRole(item) }
+                            .sizeIn(minWidth = 48.dp, minHeight = 44.dp)
                             .padding(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Text(
@@ -255,6 +256,7 @@ fun SessionTools(
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(if (isSelected) Color(0xFF9955FF) else Color(0xFF262936))
                                     .clickable { session.setBgmTrack(trackId) }
+                                    .sizeIn(minWidth = 48.dp, minHeight = 44.dp)
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
                             ) {
                                 Text(
@@ -328,6 +330,7 @@ fun SessionTools(
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(Color(0xFF262936))
                                     .clickable(enabled = active) { session.triggerSound(id) }
+                                    .sizeIn(minWidth = 48.dp, minHeight = 44.dp)
                                     .padding(horizontal = 14.dp, vertical = 8.dp)
                             ) {
                                 Text(

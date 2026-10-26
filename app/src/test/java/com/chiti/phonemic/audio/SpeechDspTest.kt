@@ -39,4 +39,44 @@ class SpeechDspTest {
         val tailSamples = impulse.sliceArray(800..4000)
         assertTrue(tailSamples.any { abs(it.toInt()) > 10 })
     }
+
+    @Test
+    fun testAdaptiveFeedbackNotchFilterAttenuatesHowlingTone() {
+        val dsp = SpeechDsp()
+        dsp.setFeedbackSuppression(true)
+
+        // Generate high-amplitude pure resonant tone at 3000 Hz (>0.65 peak, sustained)
+        val howl = ShortArray(4800) { (sin(2 * PI * 3000.0 * it / 48000) * 26000).toInt().toShort() }
+
+        // Process first block to trigger detector
+        dsp.process(howl, howl.size, 1f, 0)
+        assertTrue("Feedback should be detected on sustained high-amplitude pure tone", dsp.isFeedbackActive)
+
+        // Process second block through deployed notch filter
+        val secondBlock = ShortArray(4800) { (sin(2 * PI * 3000.0 * it / 48000) * 26000).toInt().toShort() }
+        dsp.process(secondBlock, secondBlock.size, 1f, 0)
+
+        // Output amplitude should be heavily attenuated by Q=8 notch
+        val maxOutput = secondBlock.maxOf { abs(it.toInt()) }
+        assertTrue("Notch filter must attenuate resonant peak (was $maxOutput)", maxOutput < 18000)
+    }
+
+    @Test
+    fun testFeedbackSuppressionToggleDisablesAndClearsState() {
+        val dsp = SpeechDsp()
+        dsp.setFeedbackSuppression(false)
+
+        // Disabled suppression must never flag feedback, even on a sustained howl
+        val howl = ShortArray(4800) { (sin(2 * PI * 3000.0 * it / 48000) * 26000).toInt().toShort() }
+        dsp.process(howl, howl.size, 1f, 0)
+        assertFalse("Disabled suppression must not activate", dsp.isFeedbackActive)
+
+        // Enable, detect, then disable again: state flag must clear immediately
+        dsp.setFeedbackSuppression(true)
+        val second = ShortArray(4800) { (sin(2 * PI * 3000.0 * it / 48000) * 26000).toInt().toShort() }
+        dsp.process(second, second.size, 1f, 0)
+        assertTrue(dsp.isFeedbackActive)
+        dsp.setFeedbackSuppression(false)
+        assertFalse("Disabling suppression must clear the active flag", dsp.isFeedbackActive)
+    }
 }

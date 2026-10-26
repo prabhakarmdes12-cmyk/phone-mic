@@ -60,7 +60,7 @@ Millions of Bluetooth speakers have high-output acoustic amplifiers but no dedic
 
 - **Instant Live Broadcasting:** Launch app → auto-detects connected speaker → tap to speak in `< 10 seconds`.
 - **Multi-Mic Speaker Hub (Up to 8 Microphones):** Connect up to 8 smartphones wirelessly over local Wi-Fi to a single speaker station phone, each with dedicated live VU metering, gain trim, and individual mute controls.
-- **Wi-Fi Walkie-Talkie Mesh (LAN-1):** Instant local multicast push-to-talk across unlimited devices on the same Wi-Fi network with zero cloud servers and hardware volume key PTT.
+- **Wi-Fi Walkie-Talkie Mesh (LAN-1):** Instant local multicast push-to-talk across unlimited devices on the same Wi-Fi network with zero cloud servers and hardware volume key PTT. 30 ms jitter buffer with **< 45 ms network-to-ear latency** (ultra-low ~45 ms acoustic budget: 10 ms frame + 30 ms jitter buffer + DAC output).
 - **Hardware Volume Key PTT:** Hold physical `Volume Up` or `Volume Down` buttons to broadcast instantly without looking at or touching the screen.
 - **Smart Vocal Auto-Ducking DSP:** Automatically attenuates continuous background music by **-14 dB** during speech with smooth exponential attack (35ms) and natural release (650ms).
 - **Clean Distraction-Free UI:** Minimalist default interface displaying only the big Mic toggle, VU meter, and essential speaker status; advanced mixer controls, soundboard, and network tools tucked under an expandable toggle.

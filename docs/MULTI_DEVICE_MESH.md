@@ -77,10 +77,13 @@ can delay discovery/name or burst synchronization until the periodic retry.
 - All network audio is **unencrypted and unauthenticated**. Sender names and IP
   addresses are not identity verification. Trusted LAN only; do not expose the
   port to the Internet. There is no reliable pairing, ban list or Internet relay.
-- Jitter starts at 30 ms and adapts to at most 60 ms, plus hardware/transport delay
-  and capture warm-up. Therefore **<20 ms end-to-end latency is not promised**.
-  RTT is reported only by unicast presenter/hub acknowledgment; unsynchronized
-  clock subtraction is not presented as one-way latency.
+- Jitter starts at 30 ms and adapts to at most 60 ms. The aligned performance
+  claim is **30 ms jitter buffer with < 45 ms network-to-ear latency** — an
+  ultra-low latency ~45 ms acoustic budget (10 ms frame + 30 ms jitter buffer +
+  DAC output). Slower hardware/transport and capture warm-up add to this budget,
+  and sub-20 ms end-to-end latency is not promised. RTT is reported only by
+  unicast presenter/hub acknowledgment; unsynchronized clock subtraction is not
+  presented as one-way latency.
 - Bounded handoff queues may drop writes under overload. No Opus/compression or
   lossless network transport is claimed. Eight streams use roughly 6.4 Mbps plus
   transport overhead. Multi-phone Wi-Fi/A2DP stability still needs device testing.

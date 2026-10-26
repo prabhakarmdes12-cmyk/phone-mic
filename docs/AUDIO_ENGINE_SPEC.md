@@ -108,10 +108,10 @@ Smooths speech volume variations so quiet words remain audible and loud shouts d
 Acoustic feedback occurs when sound from the Bluetooth speaker loops back into the phone microphone, creating an unstable resonant loop at specific frequencies.
 
 #### How PhoneMic Suppresses Feedback:
-1. **Spectral Peak Detection:** A low-overhead 512-point sliding FFT runs on a parallel worker thread or downsampled stream to monitor spectral peaks.
-2. **Persistence Test:** If a single narrow frequency band exhibits sudden energy growth $> 18\text{ dB}$ above surrounding bins for $> 30\text{ ms}$, it is classified as a feedback howling frequency ($f_{\text{howl}}$).
-3. **Dynamic Notch Insertion:** A high-Q notch filter ($Q = 10.0$) is immediately activated at $f_{\text{howl}}$ with an attenuation of $-12\text{ dB}$ to $-24\text{ dB}$.
-4. **Hysteresis & Recovery:** The notch filter remains active for $5\text{ seconds}$ and slowly decays if feedback energy disappears.
+1. **Resonance Estimation:** A lightweight zero-crossing frequency estimator runs per audio block (192–480 frames) on the limited output, tracking sustained pure-tone resonance signatures without FFT allocations on the real-time thread.
+2. **Persistence Test:** If the block exhibits a howling signature — peak amplitude $> 0.65$ with RMS $> 0.45$ (linear, ≈ $-7\text{ dBFS}$) and an estimated resonance frequency between $500\text{ Hz}$ and $7500\text{ Hz}$ — it is classified as feedback howling ($f_{\text{howl}}$). Detection evaluates at audio-block cadence (4–10 ms), well inside a 150 ms deployment budget.
+3. **Dynamic Notch Insertion:** Acoustic feedback suppression deploys a dynamic biquad notch filter with **Q = 8.0** (tuned to account for mobile speaker resonance drift without excessive phase ringing). The notch state is primed on recent pre-notch samples (bumpless deployment) so the howl is cancelled from the first output sample with no filter warm-up burst. The same detector/notch pair runs in both the C++ engine (`native-audio-engine.cpp`) and the Platform Java fallback (`SpeechDsp`), keeping Android 11 (API 30) ear-safe.
+4. **Hysteresis & Recovery:** The notch filter remains active for $1.5\text{ seconds}$ of audio ($72{,}000$ frames at 48 kHz). When the hold timer expires and feedback energy disappears, the notch resets and the `isFeedbackActive` state flag clears.
 
 ---
 
