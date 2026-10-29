@@ -1992,6 +1992,8 @@
     .tier-card .pro-cta { color:#FFFFFF; border:1px solid #C4B5FD; background:linear-gradient(110deg,#4C1D95,#075985); box-shadow:0 0 25px rgba(56,189,248,.22); }
     .mesh-network-diagram { max-width:880px; }
     .privacy-callout { border-left:3px solid #34D399; margin:14px 4px 0; padding:10px 16px; color:#FFFFFF; background:rgba(52,211,153,.07); border-radius:0 10px 10px 0; }
+    .privacy-guardrails { display:flex; justify-content:center; flex-wrap:wrap; gap:8px; margin:12px auto 0; }
+    .privacy-guardrails span { color:#FFFFFF; background:#0B101D; border:1px solid #34D399; border-radius:999px; padding:6px 11px; font-size:.82rem; font-weight:800; letter-spacing:.04em; }
     .singing-dsp-visualizer { max-width:880px; }
     .edition-section { padding:24px 0 52px; scroll-margin-top:140px; }
     .tier-note { color:#E2E8F0; text-align:center; max-width:760px; margin:0 auto; }
@@ -2606,9 +2608,9 @@
           <g opacity=".72" stroke="#CBD5E1" fill="#162036"><path d="M548 86a22 22 0 0 1 42-7 20 20 0 0 1 5 39h-46a16 16 0 0 1-1-32z" stroke-width="2"/><rect x="556" y="125" width="31" height="54" rx="5"/><rect x="599" y="125" width="31" height="54" rx="5"/><path d="M699 58v83m-15-58h30m-25-13 20 26m-20 0 20-26" fill="none" stroke-width="3"/></g>
           <path d="m534 45 111 145m-2-145L532 190" stroke="#F87171" stroke-width="5"/><rect x="635" y="166" width="165" height="34" rx="17" fill="#7F1D1D" stroke="#F87171" stroke-width="2"/><text x="717" y="189" fill="#FFFFFF" font-family="Arial,sans-serif" font-weight="700" font-size="15" text-anchor="middle">⛔ BLOCKED</text>
           <text x="678" y="36" class="vis-label" font-size="13" text-anchor="middle">CLOUD · TRACKERS · LISTENERS</text>
-          <text x="417" y="209" class="vis-label" font-size="12" text-anchor="middle">NO CLOUD · NO ACCOUNTS · NO TELEMETRY</text>
         </svg>
-        <div class="mobile-visual-notes" aria-label="Privacy diagram summary"><span>Voice capture and DSP stay in local phone memory.</span><span>No cloud · no accounts · no telemetry. Network audio is local only.</span></div>
+        <div class="privacy-guardrails" aria-label="Privacy safeguards"><span>NO CLOUD</span><span>NO ACCOUNTS</span><span>NO TELEMETRY</span></div>
+        <div class="mobile-visual-notes" aria-label="Privacy diagram summary"><span>Voice is captured and processed on the phone.</span><span>Mesh audio stays on your local network; it is never uploaded.</span></div>
         <p class="privacy-callout">Your voice is captured and processed on your phone. When you use mesh, audio travels only over your local network—never to the cloud.</p>
       </div>
       <div class="manifesto-grid">
