@@ -1970,7 +1970,7 @@
     }
     .visual-explainer-card::before { content:""; position:absolute; inset:0 0 auto; height:1px; background:linear-gradient(90deg,transparent,rgba(167,139,250,.55),rgba(56,189,248,.5),transparent); }
     .visual-explainer-card:hover { border-color: rgba(196,181,253,.72); }
-    .visual-explainer-card svg { display:block; width:100%; height:auto; overflow:visible; }
+    .visual-explainer-card svg[role="img"] { display:block; width:100%; height:auto; overflow:visible; pointer-events:none; }
     .visual-caption { color:#E2E8F0; text-align:center; margin:12px auto 0; max-width:760px; font-size:.95rem; }
     .mobile-visual-notes { display:none; }
     .metric-callout { display:table; color:#FFFFFF; background:#0B101D; border:1px solid #38BDF8; border-radius:999px; margin:14px auto 0; padding:7px 12px; font-size:.83rem; font-weight:700; text-align:center; }
@@ -2601,7 +2601,7 @@
         <svg viewBox="0 0 840 220" role="img" aria-labelledby="privacyTitle privacyDesc">
           <title id="privacyTitle">PhoneMic zero-cloud privacy architecture</title><desc id="privacyDesc">Microphone audio is captured and processed in the phone's protected local zone. A firewall blocks cloud servers, analytics, and eavesdropping. Mesh audio stays on the local network and is not sent to the internet.</desc>
           <defs><filter id="glow3"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-          <path d="M58 40Q174-5 305 40v136Q177 224 58 176z" fill="rgba(52,211,153,.08)" stroke="#34D399" stroke-width="3" filter="url(#glow3)"/>
+          <path d="M58 40Q174-5 305 40v136Q177 252 58 176z" fill="rgba(52,211,153,.08)" stroke="#34D399" stroke-width="3" filter="url(#glow3)"/>
           <rect x="104" y="52" width="94" height="133" rx="18" fill="#070A11" stroke="#34D399" stroke-width="3"/><rect x="116" y="68" width="70" height="88" rx="7" fill="#162036"/><text x="151" y="99" class="vis-label" font-size="12" text-anchor="middle">AudioRecord</text><text x="151" y="119" class="vis-label" font-size="11" text-anchor="middle">Oboe ring buffer</text><text x="151" y="139" class="vis-small" font-size="11" text-anchor="middle">48 kHz PCM</text>
           <text x="180" y="204" class="vis-label" font-size="12" text-anchor="middle">PROTECTED · LOCAL PHONE MEMORY</text>
           <path d="M411 22v176" stroke="#34D399" stroke-width="5"/><path d="m399 44 12-13 12 13m-24 130 12 13 12-13" fill="none" stroke="#34D399" stroke-width="3"/><rect x="365" y="80" width="92" height="24" rx="12" fill="#0B101D" stroke="#34D399" stroke-width="2"/><text x="411" y="97" class="vis-label" font-size="11" text-anchor="middle">LOCAL ONLY</text>
@@ -2610,7 +2610,6 @@
           <text x="678" y="36" class="vis-label" font-size="13" text-anchor="middle">CLOUD · TRACKERS · LISTENERS</text>
         </svg>
         <div class="privacy-guardrails" aria-label="Privacy safeguards"><span>NO CLOUD</span><span>NO ACCOUNTS</span><span>NO TELEMETRY</span></div>
-        <div class="mobile-visual-notes" aria-label="Privacy diagram summary"><span>Voice is captured and processed on the phone.</span><span>Mesh audio stays on your local network; it is never uploaded.</span></div>
         <p class="privacy-callout">Your voice is captured and processed on your phone. When you use mesh, audio travels only over your local network—never to the cloud.</p>
       </div>
       <div class="manifesto-grid">
