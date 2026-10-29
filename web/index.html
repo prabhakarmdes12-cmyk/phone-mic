@@ -3,19 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PhoneMic — Free Wireless Microphone, 8-Mic Mixer & Walkie-Talkie App</title>
-  <meta name="description" content="Turn your Android phone into a live wireless microphone, mix up to 8 phones through one speaker, or use instant Wi-Fi walkie-talkie. Ultra-low ~45 ms latency, ear safety protection, and no ads. Free public beta.">
+  <title>PhoneMic Pro — Live Studio Mic & Walkie-Talkie</title>
+  <meta name="description" content="Turn your phone into a live studio mic and walkie-talkie. PhoneMic Pro brings real-time audio, singing effects, multi-phone mesh, and on-device privacy.">
   <meta name="theme-color" content="#070A11">
 
   <!-- Open Graph / Meta -->
-  <meta property="og:title" content="PhoneMic — Free Wireless Mic, 8-Mic Mixer & Walkie-Talkie">
-  <meta property="og:description" content="Turn your phone into a live wireless microphone, connect up to 8 phones to mix through one speaker, or use instant Wi-Fi walkie-talkie. Real-time sound, ear safety limiter, and zero ads.">
+  <meta property="og:title" content="PhoneMic Pro — Live Studio Mic & Walkie-Talkie">
+  <meta property="og:description" content="A live studio mic and walkie-talkie in your phone. Real-time sound, multi-phone mesh, singing effects, and zero-cloud privacy.">
   <meta property="og:type" content="website">
 
-  <!-- Google Fonts: Outfit for display, Inter for body, JetBrains Mono for metrics -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 
   <style>
     /* ============================================================
@@ -432,8 +428,8 @@
     }
 
     .btn-nav {
-      background: linear-gradient(135deg, var(--brand-bright), var(--brand));
-      color: var(--text-inverted);
+      background: linear-gradient(135deg, #4C1D95, #075985);
+      color: #FFFFFF;
       padding: 9px 18px;
       border-radius: var(--radius-pill);
       font-weight: 700;
@@ -544,10 +540,21 @@
         min-height: 44px;
       }
       .btn-nav {
-        padding: 6px 12px;
-        font-size: 0.8rem;
+        padding: 6px 10px;
+        font-size: 0.78rem;
         min-height: 44px;
+        max-width: 154px;
+        white-space: normal;
+        justify-content: center;
+        line-height: 1.15;
+        text-align: center;
       }
+    }
+
+    @media (max-width: 400px) {
+      .brand { gap: 7px; }
+      .btn-nav { max-width: 126px; font-size: .72rem; }
+      .nav-actions { gap: 6px; }
     }
 
     @media (max-width: 480px) {
@@ -651,9 +658,7 @@
     }
 
     .hero-title .text-gradient {
-      background: linear-gradient(135deg, #FFFFFF 20%, #C4B5FD 70%, #38BDF8 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: #FFFFFF;
     }
 
     .hero-subtitle {
@@ -673,6 +678,7 @@
 
     .hero-cta-group {
       display: flex;
+      flex-wrap: wrap;
       flex-direction: column;
       align-items: center;
       justify-content: center;
@@ -687,8 +693,8 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #A78BFA 0%, #8B5CF6 100%);
-      color: var(--text-inverted);
+      background: linear-gradient(135deg, #4C1D95 0%, #075985 100%);
+      color: #FFFFFF;
       padding: 16px 36px;
       border-radius: var(--radius-pill);
       font-weight: 800;
@@ -1913,6 +1919,52 @@
         transform: none !important;
       }
     }
+
+    /* Cyber-acoustic glassmorphism explainers and edition cards */
+    .visual-explainer-card {
+      background: linear-gradient(145deg, rgba(22,32,54,.96), rgba(15,23,42,.98));
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: clamp(16px, 3vw, 28px);
+      margin: 28px auto;
+      max-width: 960px;
+      box-shadow: var(--shadow-soft), inset 0 1px rgba(255,255,255,.04);
+      position: relative;
+      overflow: hidden;
+    }
+    .visual-explainer-card::before { content:""; position:absolute; inset:0 0 auto; height:1px; background:linear-gradient(90deg,transparent,rgba(167,139,250,.55),rgba(56,189,248,.5),transparent); }
+    .visual-explainer-card:hover { border-color: rgba(196,181,253,.72); }
+    .visual-explainer-card svg { display:block; width:100%; height:auto; overflow:visible; }
+    .visual-caption { color:#E2E8F0; text-align:center; margin:12px auto 0; max-width:760px; font-size:.95rem; }
+    .feature-pills { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; max-width:900px; margin:24px auto; }
+    .feature-pill { color:#FFFFFF; background:#0F172A; border:1px solid #64748B; border-radius:999px; padding:8px 13px; font-size:.88rem; font-weight:700; }
+    .tier-pricing-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:960px; margin:40px auto; }
+    .tier-card { background:linear-gradient(145deg,#162036,#0F172A); border:1px solid #64748B; border-radius:var(--radius-lg); padding:32px 28px; display:flex; flex-direction:column; position:relative; box-shadow:var(--shadow-soft); }
+    .tier-card.pro-tier { border:2px solid #C4B5FD; background:linear-gradient(155deg,rgba(76,29,149,.48),#0F172A 68%); box-shadow:0 0 40px -10px rgba(167,139,250,.38); }
+    .tier-badge { align-self:flex-start; background:#4C1D95; color:#FFFFFF; border:1px solid #C4B5FD; font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; padding:5px 12px; border-radius:var(--radius-pill); margin-bottom:18px; }
+    .tier-card h3 { color:#FFFFFF; font:800 1.7rem/1.2 var(--font-display); margin-bottom:8px; }
+    .tier-tagline { color:#E2E8F0; min-height:3.2em; margin-bottom:14px; }
+    .tier-price { color:#FFFFFF; font-weight:800; font-size:1.2rem; margin:4px 0 18px; }
+    .tier-list { list-style:none; display:grid; gap:11px; margin:0 0 24px; padding:0; color:#F1F5F9; }
+    .tier-list li { display:flex; gap:10px; align-items:flex-start; line-height:1.5; }
+    .tier-list li::before { content:"✓"; color:#34D399; font-weight:900; flex:none; }
+    .tier-card .tier-cta { margin-top:auto; width:100%; justify-content:center; text-align:center; }
+    .tier-card .free-cta { color:#FFFFFF; border:2px solid #34D399; background:#0B101D; }
+    .tier-card .pro-cta { color:#FFFFFF; border:1px solid #C4B5FD; background:linear-gradient(110deg,#4C1D95,#075985); box-shadow:0 0 25px rgba(56,189,248,.22); }
+    .mesh-network-diagram { max-width:880px; }
+    .privacy-callout { border-left:3px solid #34D399; margin:14px 4px 0; padding:10px 16px; color:#FFFFFF; background:rgba(52,211,153,.07); border-radius:0 10px 10px 0; }
+    .singing-dsp-visualizer { max-width:880px; }
+    .edition-section { padding:24px 0 52px; scroll-margin-top:140px; }
+    .tier-note { color:#E2E8F0; text-align:center; max-width:760px; margin:0 auto; }
+    .vis-label { fill:#FFFFFF; font-family:Arial,sans-serif; font-weight:700; }
+    .vis-small { fill:#E2E8F0; font-family:Arial,sans-serif; }
+    @keyframes signalFlow { to { stroke-dashoffset:-28; } }
+    .signal-flow { animation:signalFlow 2s linear infinite; }
+    @media (prefers-reduced-motion: reduce) { .signal-flow { animation:none; stroke-dashoffset:0; } }
+    @media (max-width:768px) { .tier-pricing-grid { grid-template-columns:1fr; } .tier-card { padding:28px 22px; } }
+    @media (max-width:580px) { .visual-explainer-card { padding:12px; margin:20px auto; } .feature-pill { font-size:.82rem; } }
+    html.high-contrast .tier-card, html.high-contrast .visual-explainer-card { border:2px solid #FFFFFF !important; }
+
   </style>
 </head>
 <body>
@@ -1941,7 +1993,7 @@
             <h1>PhoneMic</h1>
             <div class="brand-tag">
               <span class="brand-tag-dot"></span>
-              <span>FREE PUBLIC BETA</span>
+              <span>PRO AUDIO • FREE BETA</span>
             </div>
           </div>
         </a>
@@ -1965,25 +2017,8 @@
             <span class="btn-text-github">GitHub</span>
           </a>
 
-          <a href="app-v1.0-stable.apk" class="btn-secondary nav-action-btn btn-stable-pill" id="navStableBtn" download="PhoneMic-v1.0-stable.apk" aria-label="Download v1.0 Original Stable APK">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" x2="12" y1="15" y2="3"/>
-            </svg>
-            <span class="btn-stable-text-long">v1.0 Stable</span>
-            <span class="btn-stable-text-short">v1.0</span>
-          </a>
-
-          <a href="app-debug.apk" class="btn-nav" id="navDownloadBtn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" x2="12" y1="15" y2="3"/>
-            </svg>
-            <span class="btn-download-text-long">Download v1.2</span>
-            <span class="btn-download-text-short">v1.2</span>
-          </a>
+          <a href="app-v1.0-stable.apk" class="btn-secondary nav-action-btn btn-stable-pill" id="navStableBtn" download="PhoneMic-v1.0-Free.apk" aria-label="Download PhoneMic Free version 1.0 stable">PhoneMic Free (v1.0)</a>
+          <a href="app-debug.apk" class="btn-nav" id="navDownloadBtn" download="PhoneMic-v1.2-Pro.apk" aria-label="Get PhoneMic Pro version 1.2 beta">✨ Get PhoneMic Pro (v1.2)</a>
         </div>
       </div>
     </div>
@@ -1998,6 +2033,7 @@
             <li><a href="#scenarios" class="nav-link">Everyday Uses</a></li>
             <li><a href="#manifesto" class="nav-link">Our Promise</a></li>
             <li><a href="#comparison" class="nav-link">Compare</a></li>
+            <li><a href="#editions" class="nav-link">Free vs Pro</a></li>
             <li><a href="#specs" class="nav-link">Under the Hood</a></li>
           </ul>
         </nav>
@@ -2102,53 +2138,34 @@
     <!-- Hero Section -->
     <section class="hero-section" aria-labelledby="hero-heading">
       <div class="hero-badge-row">
-        <div class="badge-pill brand-pill">
-          <span class="pulse-dot"></span>
-          <span>BETA RELEASE — FREE FOR A LIMITED TIME</span>
-        </div>
-        <div class="badge-pill white-hat-pill">
-          <span>🛡️ NO ADS • NO TRACKING • 100% ON-DEVICE</span>
-        </div>
-        <div class="badge-pill" style="background:rgba(56, 189, 248, 0.12); border-color:rgba(56, 189, 248, 0.3); color:var(--accent-cyan);">
-          <span>📡 8-MIC SPEAKER HUB & WALKIE-TALKIE MESH</span>
-        </div>
+        <div class="badge-pill brand-pill"><span>✨ NEW: PHONEMIC PRO RELEASED</span></div>
+        <div class="badge-pill white-hat-pill"><span>🛡️ 100% ON-DEVICE • ZERO CLOUD</span></div>
+        <div class="badge-pill"><span>⚡ ULTRA-LOW LATENCY</span></div>
       </div>
-
-      <h1 class="hero-title" id="hero-heading">
-        Turn your phone into a <span class="text-gradient">live wireless mic & multi-phone soundstage</span>
-      </h1>
-
-      <p class="hero-subtitle">
-        Plug into any Bluetooth speaker or sound system with zero lag. Connect up to 8 phones to mix together through one speaker, or use instant Wi-Fi walkie-talkie across unlimited devices with zero cloud lag.
-      </p>
-
+      <h1 class="hero-title" id="hero-heading">Turn any phone into a <span class="text-gradient">live studio mic &amp; walkie-talkie</span></h1>
+      <p class="hero-subtitle">Stream clear sound to a Bluetooth or AUX speaker. Connect up to 8 phones for instant walkie-talkie—no internet, accounts, or ads. Your audio stays on your devices.</p>
+      <div class="feature-pills" aria-label="PhoneMic features">
+        <span class="feature-pill">🎤 Wireless mic</span><span class="feature-pill">📻 Multi-phone walkie-talkie</span><span class="feature-pill">🎶 Studio singing reverb</span><span class="feature-pill">⏺️ 48 kHz WAV recorder</span><span class="feature-pill">🔒 Zero-cloud privacy</span>
+      </div>
       <div class="hero-cta-group">
-        <a href="app-debug.apk" class="btn-primary" id="downloadBtn" download="PhoneMic-v1.2-beta.apk">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" x2="12" y1="15" y2="3"/>
-          </svg>
-          <span>Download Free APK v1.2 (22 MB)</span>
-        </a>
-
-        <a href="app-v1.0-stable.apk" class="btn-secondary" id="downloadStableBtn" download="PhoneMic-v1.0-stable.apk" style="border-color: rgba(62, 207, 142, 0.45); color: #3ecf8e;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" x2="12" y1="15" y2="3"/>
-          </svg>
-          <span>Download v1.0 (Original Stable - 22 MB)</span>
-        </a>
-
-        <a href="#demo" class="btn-secondary">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polygon points="5 3 19 12 5 21 5 3"/>
-          </svg>
-          <span>Try the Live Sound Demo</span>
-        </a>
+        <a href="app-debug.apk" class="btn-primary" id="downloadBtn" download="PhoneMic-v1.2-Pro.apk"><span>✨ Get PhoneMic Pro (v1.2 Beta)</span></a>
+        <a href="app-v1.0-stable.apk" class="btn-secondary" id="downloadStableBtn" download="PhoneMic-v1.0-Free.apk"><span>Download PhoneMic Free (v1.0)</span></a>
+        <a href="#demo" class="btn-secondary"><span>Try the live demo</span></a>
       </div>
-
+      <div class="visual-explainer-card how-it-works-visual" aria-label="How PhoneMic works">
+        <svg viewBox="0 0 960 220" role="img" aria-labelledby="howTitle howDesc">
+          <title id="howTitle">How PhoneMic works</title><desc id="howDesc">Speak into your phone, process audio locally with low-lag DSP, then send it to a speaker or nearby phones.</desc>
+          <defs><linearGradient id="beamA"><stop stop-color="#38BDF8"/><stop offset="1" stop-color="#A78BFA"/></linearGradient><linearGradient id="beamB"><stop stop-color="#A78BFA"/><stop offset="1" stop-color="#34D399"/></linearGradient><filter id="glow1"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+          <path d="M192 105H350" stroke="url(#beamA)" stroke-width="5" stroke-dasharray="10 10" class="signal-flow"/><path d="M560 98H705M560 112L705 165" stroke="url(#beamB)" stroke-width="4" stroke-dasharray="8 9" class="signal-flow"/>
+          <rect x="90" y="39" width="82" height="132" rx="17" fill="#070A11" stroke="#38BDF8" stroke-width="3"/><rect x="101" y="55" width="60" height="89" rx="7" fill="#162036"/><circle cx="131" cy="157" r="4" fill="#E2E8F0"/>
+          <path d="M70 72q-19 32 0 64m-14-76q-30 44 0 88M184 72q19 32 0 64" fill="none" stroke="#38BDF8" stroke-width="3"/>
+          <path d="M402 49l57-26 57 26v80l-57 28-57-28z" fill="#162036" stroke="#A78BFA" stroke-width="3" filter="url(#glow1)"/><rect x="425" y="61" width="68" height="55" rx="8" fill="#0B101D" stroke="#C4B5FD" stroke-width="2"/><path d="M438 92h9l6-16 9 31 8-21 7 6h8" fill="none" stroke="#38BDF8" stroke-width="3"/>
+          <path d="M755 86l50-21v75l-50-21z" fill="#162036" stroke="#34D399" stroke-width="3"/><path d="M815 82q25 20 0 40m10-53q43 33 0 66" fill="none" stroke="#34D399" stroke-width="3"/>
+          <rect x="753" y="146" width="29" height="55" rx="7" fill="#162036" stroke="#FBBF24" stroke-width="2"/><rect x="797" y="146" width="29" height="55" rx="7" fill="#162036" stroke="#FBBF24" stroke-width="2"/><rect x="841" y="146" width="29" height="55" rx="7" fill="#162036" stroke="#FBBF24" stroke-width="2"/><path d="M767 145q32-39 44 0m0 0q12-39 44 0" fill="none" stroke="#FBBF24" stroke-width="2" stroke-dasharray="5 5"/>
+          <text x="131" y="195" text-anchor="middle" class="vis-label" font-size="15">1. Speak · 48 kHz</text><text x="459" y="195" text-anchor="middle" class="vis-label" font-size="15">2. Process · on-device DSP</text><text x="805" y="213" text-anchor="middle" class="vis-label" font-size="14">3A. Speaker / Bluetooth · 3B. Mesh</text>
+        </svg>
+        <p class="visual-caption">Speak. PhoneMic processes locally. Sound goes straight to your speaker or team.</p>
+      </div>
       <div class="hero-trust-bar">
         <span class="hero-trust-item">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
@@ -2417,6 +2434,21 @@
         </p>
       </div>
 
+      <div class="visual-explainer-card mesh-network-diagram">
+        <svg viewBox="0 0 840 360" role="img" aria-labelledby="meshSvgTitle meshSvgDesc">
+          <title id="meshSvgTitle">Phone-to-phone walkie-talkie mesh</title><desc id="meshSvgDesc">Three walkie-talkie phones send voice over a local hotspot to a hub phone connected to a PA speaker. No internet router or cloud is needed. Network-to-ear budget is under 45 milliseconds.</desc>
+          <defs><filter id="glow2"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+          <path d="M190 102Q335 18 514 91M194 123Q337 305 514 152M230 210Q365 289 514 170" fill="none" stroke="#FBBF24" stroke-width="3" stroke-dasharray="9 8" class="signal-flow"/><path d="M514 106Q356 38 230 102M514 161Q361 289 230 210" fill="none" stroke="#38BDF8" stroke-width="2" stroke-dasharray="5 9"/>
+          <g fill="#162036" stroke="#FBBF24" stroke-width="3"><rect x="112" y="74" width="78" height="125" rx="15"/><rect x="112" y="218" width="78" height="125" rx="15"/><rect x="263" y="217" width="78" height="125" rx="15"/></g>
+          <g fill="#162036" stroke="#38BDF8" stroke-width="3" filter="url(#glow2)"><rect x="501" y="91" width="94" height="151" rx="18"/></g>
+          <g fill="#0B101D" stroke="#CBD5E1" stroke-width="1"><rect x="122" y="90" width="58" height="77" rx="5"/><rect x="122" y="234" width="58" height="77" rx="5"/><rect x="273" y="233" width="58" height="77" rx="5"/><rect x="513" y="110" width="70" height="91" rx="7"/></g>
+          <g class="vis-label" font-size="13" text-anchor="middle"><text x="151" y="185">WALKIE-TALKIE 1</text><text x="151" y="329">WALKIE-TALKIE 2</text><text x="302" y="328">WALKIE-TALKIE 3</text><text x="548" y="222">RECEIVER</text></g><text x="548" y="82" class="vis-label" font-size="13" text-anchor="middle">PHONE 1 · HUB</text>
+          <path d="M620 125l60-24v87l-60-24z" fill="#162036" stroke="#34D399" stroke-width="3"/><path d="M684 115q25 20 0 40m10-50q40 30 0 60" fill="none" stroke="#34D399" stroke-width="3"/><text x="669" y="211" class="vis-label" font-size="15" text-anchor="middle">PA SPEAKER</text>
+          <path d="M403 53l15 7v17c0 12-9 19-15 22-6-3-15-10-15-22V60z" fill="#0B101D" stroke="#34D399" stroke-width="2"/><path d="m396 75 5 5 10-12" fill="none" stroke="#34D399" stroke-width="3"/><text x="425" y="69" class="vis-label" font-size="13">✓ NO WI-FI ROUTER NEEDED</text><text x="425" y="88" class="vis-small" font-size="12">Direct mobile hotspot (SoftAP)</text>
+          <rect x="331" y="291" width="440" height="40" rx="20" fill="#0B101D" stroke="#38BDF8"/><text x="551" y="316" class="vis-label" font-size="14" text-anchor="middle">&lt; 45 ms network-to-ear · 30 ms jitter buffer</text>
+          <text x="413" y="145" class="vis-small" font-size="12" text-anchor="middle">local PTT audio</text>
+        </svg>
+      </div>
       <div class="mesh-grid">
         <!-- Card 1: 8-Mic Speaker Hub -->
         <div class="mesh-card">
@@ -2517,6 +2549,21 @@
         </p>
       </div>
 
+      <div class="visual-explainer-card privacy-infographic">
+        <svg viewBox="0 0 840 220" role="img" aria-labelledby="privacyTitle privacyDesc">
+          <title id="privacyTitle">PhoneMic zero-cloud privacy architecture</title><desc id="privacyDesc">Microphone audio is captured and processed in phone memory inside a protected local zone. A firewall blocks cloud servers, analytics, and eavesdropping. No bytes leave the local device or hotspot.</desc>
+          <defs><filter id="glow3"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+          <path d="M58 40Q174-5 305 40v136Q177 224 58 176z" fill="rgba(52,211,153,.08)" stroke="#34D399" stroke-width="3" filter="url(#glow3)"/>
+          <rect x="104" y="52" width="94" height="133" rx="18" fill="#070A11" stroke="#34D399" stroke-width="3"/><rect x="116" y="68" width="70" height="88" rx="7" fill="#162036"/><text x="151" y="99" class="vis-label" font-size="12" text-anchor="middle">AudioRecord</text><text x="151" y="119" class="vis-label" font-size="11" text-anchor="middle">Oboe ring buffer</text><text x="151" y="139" class="vis-small" font-size="11" text-anchor="middle">48 kHz PCM</text>
+          <text x="180" y="204" class="vis-label" font-size="14" text-anchor="middle">LOCAL DEVICE MEMORY</text>
+          <path d="M411 22v176" stroke="#34D399" stroke-width="5"/><path d="m399 44 12-13 12 13m-24 130 12 13 12-13" fill="none" stroke="#34D399" stroke-width="3"/><text x="411" y="87" class="vis-label" font-size="13" text-anchor="middle" transform="rotate(-90 411 87)">LOCAL ONLY</text>
+          <g opacity=".72" stroke="#CBD5E1" fill="#162036"><path d="M548 86a22 22 0 0 1 42-7 20 20 0 0 1 5 39h-46a16 16 0 0 1-1-32z" stroke-width="2"/><rect x="556" y="125" width="31" height="54" rx="5"/><rect x="599" y="125" width="31" height="54" rx="5"/><path d="M699 58v83m-15-58h30m-25-13 20 26m-20 0 20-26" fill="none" stroke-width="3"/></g>
+          <path d="m534 45 111 145m-2-145L532 190" stroke="#F87171" stroke-width="5"/><rect x="635" y="166" width="165" height="34" rx="17" fill="#7F1D1D" stroke="#F87171" stroke-width="2"/><text x="717" y="189" fill="#FFFFFF" font-family="Arial,sans-serif" font-weight="700" font-size="15" text-anchor="middle">⛔ BLOCKED</text>
+          <text x="678" y="36" class="vis-label" font-size="13" text-anchor="middle">CLOUD · TRACKERS · LISTENERS</text>
+          <text x="417" y="216" class="vis-label" font-size="12" text-anchor="middle">NO CLOUD · NO ACCOUNTS · NO TELEMETRY</text>
+        </svg>
+        <p class="privacy-callout">Your voice is digitized and processed on your phone, then sent only over local hardware. Zero bytes leave your local space.</p>
+      </div>
       <div class="manifesto-grid">
         <!-- Other Apps -->
         <div class="manifesto-card bad">
@@ -2668,6 +2715,21 @@
         </p>
       </div>
 
+      <div class="visual-explainer-card singing-dsp-visualizer">
+        <svg viewBox="0 0 840 260" role="img" aria-labelledby="singTitle singDesc">
+          <title id="singTitle">PhoneMic Pro studio singing audio visualizer</title><desc id="singDesc">A dry microphone waveform is compared with a wider processed concert-mode signal, including room reflection at 60 milliseconds, slapback echo at 160 milliseconds, a reverb decay envelope, and an ear safety limiter at minus 0.5 dBFS.</desc>
+          <defs><linearGradient id="waveGrad" x1="0" x2="1"><stop stop-color="#A78BFA"/><stop offset="1" stop-color="#38BDF8"/></linearGradient><linearGradient id="fadeGrad" x1="0" x2="1"><stop stop-color="#A78BFA" stop-opacity=".8"/><stop offset="1" stop-color="#38BDF8" stop-opacity=".1"/></linearGradient></defs>
+          <text x="20" y="38" class="vis-label" font-size="16">RAW MICROPHONE INPUT</text><text x="20" y="59" class="vis-small" font-size="13">Dry voice</text>
+          <path d="M165 65h630" stroke="#64748B" stroke-width="1"/><path d="M165 77l10-3 10 5 10-4 10 1 10-2 10 4 10-3 10 1 10-2 10 2 10-3 10 2 10-1 10 3 10-3 10 1 10-2 10 4 10-3 10 2 10-2 10 1 10-3 10 4 10-2 10 1 10-3 10 2 10-1 10 3 10-4 10 2 10 0 10-3 10 4 10-2 10 1 10-2 10 3 10-3 10 1 10-2 10 3 10-1 10 2 10-3 10 2 10-1 10 2 10-3 10 1 10 2 10-3 10 1 10-2 10 2 10-1" fill="none" stroke="#E2E8F0" stroke-width="2"/>
+          <text x="20" y="125" class="vis-label" font-size="16">PRO · CONCERT MODE</text><text x="20" y="147" class="vis-small" font-size="13">Reverb + vocal echo</text>
+          <path d="M165 165h630" stroke="#34D399" stroke-width="2" stroke-dasharray="8 6"/><text x="790" y="157" class="vis-label" font-size="12" text-anchor="end">−0.5 dBFS · EAR SAFETY LIMITER</text>
+          <path d="M165 196 Q186 195 205 182 T246 190 T287 167 T328 197 T369 174 T410 201 T451 185 T492 209 T533 190 T574 216 T615 201 T656 222 T697 210 T738 228 T795 220" fill="none" stroke="url(#waveGrad)" stroke-width="6"/>
+          <path d="M165 200 Q186 199 205 190 T246 196 T287 180 T328 202 T369 187 T410 205 T451 194 T492 211 T533 199 T574 216 T615 207 T656 220 T697 213 T738 226 T795 220" fill="none" stroke="#C4B5FD" stroke-opacity=".6" stroke-width="2"/>
+          <path d="M250 175V235M360 174V235" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="250" cy="190" r="6" fill="#FBBF24"/><circle cx="360" cy="187" r="6" fill="#FBBF24"/><text x="250" y="251" class="vis-label" font-size="12" text-anchor="middle">60 ms · Room reflection</text><text x="360" y="251" class="vis-label" font-size="12" text-anchor="middle">160 ms · Slapback echo</text>
+          <path d="M390 164 C480 174 550 193 620 206 S735 226 795 231" fill="none" stroke="url(#fadeGrad)" stroke-width="2" stroke-dasharray="5 5"/><text x="665" y="244" class="vis-small" font-size="12">Plate reverb decay</text>
+        </svg>
+        <p class="visual-caption">Give vocals space and character—while the safety limiter keeps peaks in check.</p>
+      </div>
       <div class="scenarios-grid">
         <article class="scenario-card">
           <div>
@@ -2863,6 +2925,29 @@
       </div>
     </section>
 
+    <!-- Choose Your Edition -->
+    <section class="edition-section" id="editions" aria-labelledby="edition-heading">
+      <div class="section-header">
+        <div class="section-eyebrow">Choose your edition</div>
+        <h2 class="section-title" id="edition-heading">Simple mic or full audio studio?</h2>
+        <p class="section-desc">Start with the stable essentials, or get the complete PhoneMic Pro toolkit.</p>
+      </div>
+      <div class="tier-pricing-grid">
+        <article class="tier-card free-tier">
+          <h3>PhoneMic Free</h3><p class="tier-tagline">The original, rock-solid wireless microphone.</p><p class="tier-price">100% Free Forever</p>
+          <ul class="tier-list"><li>Wireless mic for one phone</li><li>Bluetooth and 3.5 mm AUX speaker routing</li><li>Speech cleanup and −0.5 dBFS safety limiter</li><li>No ads. No tracking.</li></ul>
+          <a class="btn-secondary tier-cta free-cta" href="app-v1.0-stable.apk" download="PhoneMic-v1.0-Free.apk">Download PhoneMic Free (v1.0 Stable)</a>
+        </article>
+        <article class="tier-card pro-tier">
+          <span class="tier-badge">Pro Edition · Public Beta Free Access</span>
+          <h3>PhoneMic Pro</h3><p class="tier-tagline">The complete audio powerhouse for performers, teams, and creators.</p><p class="tier-price">Free during Public Beta</p>
+          <ul class="tier-list"><li>Everything in Free, plus:</li><li>Walkie-talkie mesh for up to 8 phones, no router required</li><li>8-channel live mixer through one speaker</li><li>Singing presets: reverb, slapback, chorus, and robot voice</li><li>48 kHz WAV recorder with sharing and preview</li><li>Soundboard with smart voice ducking</li><li>Hardware volume-key push-to-talk</li><li>Automatic feedback notch and dual audio engines</li></ul>
+          <a class="btn-primary tier-cta pro-cta" href="app-debug.apk" download="PhoneMic-v1.2-Pro.apk">✨ Download PhoneMic Pro (v1.2 Beta)</a>
+        </article>
+      </div>
+      <p class="tier-note">PhoneMic Pro v1.2 is currently available free during public beta. PhoneMic Free v1.0 remains the stable original release.</p>
+    </section>
+
     <!-- 3-Step Installation -->
     <section class="install-section" aria-labelledby="install-heading">
       <div class="section-header">
@@ -2875,7 +2960,7 @@
         <div class="step-card">
           <div class="step-number" aria-hidden="true">1</div>
           <h3>Download the APK</h3>
-          <p>Choose your edition: <a href="app-debug.apk" style="color:var(--accent-cyan); font-weight:600;" download="PhoneMic-v1.2-beta.apk">Latest v1.2 Beta</a> (Multi-Mic & Walkie-Talkie) or <a href="app-v1.0-stable.apk" style="color:#3ecf8e; font-weight:600;" download="PhoneMic-v1.0-stable.apk">Original Stable v1.0</a>. When Android asks to confirm, tap <strong>Download anyway</strong>.</p>
+          <p>Choose <a href="app-debug.apk" style="color:#FFFFFF; font-weight:700;" download="PhoneMic-v1.2-Pro.apk">PhoneMic Pro v1.2 Beta</a> or <a href="app-v1.0-stable.apk" style="color:#FFFFFF; font-weight:700;" download="PhoneMic-v1.0-Free.apk">PhoneMic Free v1.0 Stable</a>. When Android asks to confirm, tap <strong>Download anyway</strong>.</p>
         </div>
 
         <div class="step-card">
