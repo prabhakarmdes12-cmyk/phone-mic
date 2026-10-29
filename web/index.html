@@ -1936,6 +1936,9 @@
     .visual-explainer-card:hover { border-color: rgba(196,181,253,.72); }
     .visual-explainer-card svg { display:block; width:100%; height:auto; overflow:visible; }
     .visual-caption { color:#E2E8F0; text-align:center; margin:12px auto 0; max-width:760px; font-size:.95rem; }
+    .mobile-visual-notes { display:none; }
+    .metric-callout { display:table; color:#FFFFFF; background:#0B101D; border:1px solid #38BDF8; border-radius:999px; margin:14px auto 0; padding:7px 12px; font-size:.83rem; font-weight:700; text-align:center; }
+    .privacy-callout { font-size:.96rem; line-height:1.6; }
     .feature-pills { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; max-width:900px; margin:24px auto; }
     .feature-pill { color:#FFFFFF; background:#0F172A; border:1px solid #64748B; border-radius:999px; padding:8px 13px; font-size:.88rem; font-weight:700; }
     .tier-pricing-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:960px; margin:40px auto; }
@@ -1960,9 +1963,13 @@
     .vis-small { fill:#E2E8F0; font-family:Arial,sans-serif; }
     @keyframes signalFlow { to { stroke-dashoffset:-28; } }
     .signal-flow { animation:signalFlow 2s linear infinite; }
-    @media (prefers-reduced-motion: reduce) { .signal-flow { animation:none; stroke-dashoffset:0; } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.01ms !important; }
+      .signal-flow { animation:none !important; stroke-dashoffset:0; }
+      #heroCanvas { display:none !important; }
+    }
     @media (max-width:768px) { .tier-pricing-grid { grid-template-columns:1fr; } .tier-card { padding:28px 22px; } }
-    @media (max-width:580px) { .visual-explainer-card { padding:12px; margin:20px auto; } .feature-pill { font-size:.82rem; } }
+    @media (max-width:580px) { .visual-explainer-card { padding:12px; margin:20px auto; } .feature-pill { font-size:.82rem; } .mobile-visual-notes { display:grid; grid-template-columns:1fr; gap:7px; margin:12px 0 0; } .mobile-visual-notes span { display:block; color:#FFFFFF; background:#0B101D; border-left:3px solid #38BDF8; border-radius:6px; padding:8px 10px; font-size:.86rem; font-weight:650; line-height:1.4; } }
     html.high-contrast .tier-card, html.high-contrast .visual-explainer-card { border:2px solid #FFFFFF !important; }
 
   </style>
@@ -2164,6 +2171,7 @@
           <rect x="753" y="146" width="29" height="55" rx="7" fill="#162036" stroke="#FBBF24" stroke-width="2"/><rect x="797" y="146" width="29" height="55" rx="7" fill="#162036" stroke="#FBBF24" stroke-width="2"/><rect x="841" y="146" width="29" height="55" rx="7" fill="#162036" stroke="#FBBF24" stroke-width="2"/><path d="M767 145q32-39 44 0m0 0q12-39 44 0" fill="none" stroke="#FBBF24" stroke-width="2" stroke-dasharray="5 5"/>
           <text x="131" y="195" text-anchor="middle" class="vis-label" font-size="15">1. Speak · 48 kHz</text><text x="459" y="195" text-anchor="middle" class="vis-label" font-size="15">2. Process · on-device DSP</text><text x="805" y="213" text-anchor="middle" class="vis-label" font-size="14">3A. Speaker / Bluetooth · 3B. Mesh</text>
         </svg>
+        <div class="mobile-visual-notes" aria-label="Three stages"><span>1 · Capture voice on your phone</span><span>2 · Run the limiter, feedback notch, and vocal effects on-device</span><span>3 · Send sound to a speaker or nearby phones</span></div>
         <p class="visual-caption">Speak. PhoneMic processes locally. Sound goes straight to your speaker or team.</p>
       </div>
       <div class="hero-trust-bar">
@@ -2438,16 +2446,17 @@
         <svg viewBox="0 0 840 360" role="img" aria-labelledby="meshSvgTitle meshSvgDesc">
           <title id="meshSvgTitle">Phone-to-phone walkie-talkie mesh</title><desc id="meshSvgDesc">Three walkie-talkie phones send voice over a local hotspot to a hub phone connected to a PA speaker. No internet router or cloud is needed. Network-to-ear budget is under 45 milliseconds.</desc>
           <defs><filter id="glow2"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-          <path d="M190 102Q335 18 514 91M194 123Q337 305 514 152M230 210Q365 289 514 170" fill="none" stroke="#FBBF24" stroke-width="3" stroke-dasharray="9 8" class="signal-flow"/><path d="M514 106Q356 38 230 102M514 161Q361 289 230 210" fill="none" stroke="#38BDF8" stroke-width="2" stroke-dasharray="5 9"/>
+          <path d="M190 102Q335 18 514 91M194 123Q337 305 514 152M230 210Q365 289 514 170M157 199Q207 206 273 245" fill="none" stroke="#FBBF24" stroke-width="3" stroke-dasharray="9 8" class="signal-flow"/><path d="M514 106Q356 38 230 102M514 161Q361 289 230 210M272 255Q208 224 158 210" fill="none" stroke="#38BDF8" stroke-width="2" stroke-dasharray="5 9"/>
           <g fill="#162036" stroke="#FBBF24" stroke-width="3"><rect x="112" y="74" width="78" height="125" rx="15"/><rect x="112" y="218" width="78" height="125" rx="15"/><rect x="263" y="217" width="78" height="125" rx="15"/></g>
           <g fill="#162036" stroke="#38BDF8" stroke-width="3" filter="url(#glow2)"><rect x="501" y="91" width="94" height="151" rx="18"/></g>
           <g fill="#0B101D" stroke="#CBD5E1" stroke-width="1"><rect x="122" y="90" width="58" height="77" rx="5"/><rect x="122" y="234" width="58" height="77" rx="5"/><rect x="273" y="233" width="58" height="77" rx="5"/><rect x="513" y="110" width="70" height="91" rx="7"/></g>
           <g class="vis-label" font-size="13" text-anchor="middle"><text x="151" y="185">WALKIE-TALKIE 1</text><text x="151" y="329">WALKIE-TALKIE 2</text><text x="302" y="328">WALKIE-TALKIE 3</text><text x="548" y="222">RECEIVER</text></g><text x="548" y="82" class="vis-label" font-size="13" text-anchor="middle">PHONE 1 · HUB</text>
           <path d="M620 125l60-24v87l-60-24z" fill="#162036" stroke="#34D399" stroke-width="3"/><path d="M684 115q25 20 0 40m10-50q40 30 0 60" fill="none" stroke="#34D399" stroke-width="3"/><text x="669" y="211" class="vis-label" font-size="15" text-anchor="middle">PA SPEAKER</text>
           <path d="M403 53l15 7v17c0 12-9 19-15 22-6-3-15-10-15-22V60z" fill="#0B101D" stroke="#34D399" stroke-width="2"/><path d="m396 75 5 5 10-12" fill="none" stroke="#34D399" stroke-width="3"/><text x="425" y="69" class="vis-label" font-size="13">✓ NO WI-FI ROUTER NEEDED</text><text x="425" y="88" class="vis-small" font-size="12">Direct mobile hotspot (SoftAP)</text>
-          <rect x="331" y="291" width="440" height="40" rx="20" fill="#0B101D" stroke="#38BDF8"/><text x="551" y="316" class="vis-label" font-size="14" text-anchor="middle">&lt; 45 ms network-to-ear · 30 ms jitter buffer</text>
           <text x="413" y="145" class="vis-small" font-size="12" text-anchor="middle">local PTT audio</text>
         </svg>
+        <div class="mobile-visual-notes" aria-label="Mesh diagram summary"><span>Phones 2–4 talk over the local hotspot to Phone 1, the speaker hub.</span><span>Two-way local audio; no Wi-Fi router or cloud required.</span></div>
+        <div class="metric-callout">&lt; 45 ms network-to-ear · 30 ms jitter buffer</div>
       </div>
       <div class="mesh-grid">
         <!-- Card 1: 8-Mic Speaker Hub -->
@@ -2555,14 +2564,15 @@
           <defs><filter id="glow3"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
           <path d="M58 40Q174-5 305 40v136Q177 224 58 176z" fill="rgba(52,211,153,.08)" stroke="#34D399" stroke-width="3" filter="url(#glow3)"/>
           <rect x="104" y="52" width="94" height="133" rx="18" fill="#070A11" stroke="#34D399" stroke-width="3"/><rect x="116" y="68" width="70" height="88" rx="7" fill="#162036"/><text x="151" y="99" class="vis-label" font-size="12" text-anchor="middle">AudioRecord</text><text x="151" y="119" class="vis-label" font-size="11" text-anchor="middle">Oboe ring buffer</text><text x="151" y="139" class="vis-small" font-size="11" text-anchor="middle">48 kHz PCM</text>
-          <text x="180" y="204" class="vis-label" font-size="14" text-anchor="middle">LOCAL DEVICE MEMORY</text>
-          <path d="M411 22v176" stroke="#34D399" stroke-width="5"/><path d="m399 44 12-13 12 13m-24 130 12 13 12-13" fill="none" stroke="#34D399" stroke-width="3"/><text x="411" y="87" class="vis-label" font-size="13" text-anchor="middle" transform="rotate(-90 411 87)">LOCAL ONLY</text>
+          <text x="180" y="204" class="vis-label" font-size="12" text-anchor="middle">PROTECTED · LOCAL PHONE MEMORY</text>
+          <path d="M411 22v176" stroke="#34D399" stroke-width="5"/><path d="m399 44 12-13 12 13m-24 130 12 13 12-13" fill="none" stroke="#34D399" stroke-width="3"/><rect x="365" y="80" width="92" height="24" rx="12" fill="#0B101D" stroke="#34D399" stroke-width="2"/><text x="411" y="97" class="vis-label" font-size="11" text-anchor="middle">LOCAL ONLY</text>
           <g opacity=".72" stroke="#CBD5E1" fill="#162036"><path d="M548 86a22 22 0 0 1 42-7 20 20 0 0 1 5 39h-46a16 16 0 0 1-1-32z" stroke-width="2"/><rect x="556" y="125" width="31" height="54" rx="5"/><rect x="599" y="125" width="31" height="54" rx="5"/><path d="M699 58v83m-15-58h30m-25-13 20 26m-20 0 20-26" fill="none" stroke-width="3"/></g>
           <path d="m534 45 111 145m-2-145L532 190" stroke="#F87171" stroke-width="5"/><rect x="635" y="166" width="165" height="34" rx="17" fill="#7F1D1D" stroke="#F87171" stroke-width="2"/><text x="717" y="189" fill="#FFFFFF" font-family="Arial,sans-serif" font-weight="700" font-size="15" text-anchor="middle">⛔ BLOCKED</text>
           <text x="678" y="36" class="vis-label" font-size="13" text-anchor="middle">CLOUD · TRACKERS · LISTENERS</text>
-          <text x="417" y="216" class="vis-label" font-size="12" text-anchor="middle">NO CLOUD · NO ACCOUNTS · NO TELEMETRY</text>
+          <text x="417" y="209" class="vis-label" font-size="12" text-anchor="middle">NO CLOUD · NO ACCOUNTS · NO TELEMETRY</text>
         </svg>
-        <p class="privacy-callout">Your voice is digitized and processed on your phone, then sent only over local hardware. Zero bytes leave your local space.</p>
+        <div class="mobile-visual-notes" aria-label="Privacy diagram summary"><span>Voice capture and DSP stay in local phone memory.</span><span>No cloud · no accounts · no telemetry. Network audio is local only.</span></div>
+        <p class="privacy-callout">Your voice is captured and processed on your phone. When you use mesh, audio travels only over your local network—never to the cloud.</p>
       </div>
       <div class="manifesto-grid">
         <!-- Other Apps -->
@@ -2728,6 +2738,7 @@
           <path d="M250 175V235M360 174V235" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="4 4"/><circle cx="250" cy="190" r="6" fill="#FBBF24"/><circle cx="360" cy="187" r="6" fill="#FBBF24"/><text x="250" y="251" class="vis-label" font-size="12" text-anchor="middle">60 ms · Room reflection</text><text x="360" y="251" class="vis-label" font-size="12" text-anchor="middle">160 ms · Slapback echo</text>
           <path d="M390 164 C480 174 550 193 620 206 S735 226 795 231" fill="none" stroke="url(#fadeGrad)" stroke-width="2" stroke-dasharray="5 5"/><text x="665" y="244" class="vis-small" font-size="12">Plate reverb decay</text>
         </svg>
+        <div class="mobile-visual-notes" aria-label="Concert mode effects"><span>Dry voice becomes a wide, layered concert vocal.</span><span>Room reflection at 60 ms · slapback echo at 160 ms · plate reverb decay.</span><span>−0.5 dBFS safety ceiling helps control loud peaks.</span></div>
         <p class="visual-caption">Give vocals space and character—while the safety limiter keeps peaks in check.</p>
       </div>
       <div class="scenarios-grid">
