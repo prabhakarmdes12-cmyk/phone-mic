@@ -1521,11 +1521,11 @@
       background: var(--surface-1);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
-      padding: 26px 22px;
+      padding: 0;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      justify-content: flex-start;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease, box-shadow 0.25s ease;
       position: relative;
       overflow: hidden;
     }
@@ -1535,6 +1535,42 @@
       border-color: var(--border-brand);
       box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.8), var(--shadow-glow);
     }
+
+    .scenario-image-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      flex: none;
+      background: #0B101D;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .scenario-image-frame::after {
+      content: "";
+      position: absolute;
+      inset: 35% 0 0;
+      pointer-events: none;
+      background: linear-gradient(180deg, transparent 0%, rgba(7,10,17,.44) 100%);
+    }
+
+    .scenario-image {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: grayscale(1) contrast(1.05) brightness(.88);
+      transition: transform .45s cubic-bezier(.2,.7,.2,1), filter .3s ease;
+    }
+
+    .scenario-card:hover .scenario-image {
+      transform: scale(1.045);
+      filter: grayscale(1) contrast(1.08) brightness(.98);
+    }
+
+    .scenario-card-content { padding: 20px 22px 0; flex: 1; }
+    .scenario-card-content h3 { margin-top: 0; }
+    .scenario-card .scenario-specs-pill { margin: 14px 22px 22px; }
 
     .scenario-badge {
       display: inline-flex;
@@ -2744,7 +2780,10 @@
       </div>
       <div class="scenarios-grid">
         <article class="scenario-card">
-          <div>
+          <div class="scenario-image-frame">
+            <img class="scenario-image" src="images/classroom-mono.jpg" alt="Teacher addresses students while using a phone as a microphone." width="1376" height="768" loading="lazy" decoding="async">
+          </div>
+          <div class="scenario-card-content">
             <div class="scenario-badge">EDUCATION</div>
             <h3>🎓 Classroom & Lectures</h3>
             <p>
@@ -2757,7 +2796,10 @@
         </article>
 
         <article class="scenario-card">
-          <div>
+          <div class="scenario-image-frame">
+            <img class="scenario-image" src="images/fitness-mono.jpg" alt="Fitness coach calls instructions to a group during a gym workout." width="1376" height="768" loading="lazy" decoding="async">
+          </div>
+          <div class="scenario-card-content">
             <div class="scenario-badge">FITNESS & COACHING</div>
             <h3>⚡ Fitness & Gym</h3>
             <p>
@@ -2770,7 +2812,10 @@
         </article>
 
         <article class="scenario-card">
-          <div>
+          <div class="scenario-image-frame">
+            <img class="scenario-image" src="images/tour-guide-mono.jpg" alt="Tour guide speaks to a group in a historic city square." width="1376" height="768" loading="lazy" decoding="async">
+          </div>
+          <div class="scenario-card-content">
             <div class="scenario-badge">TOURISM</div>
             <h3>🏛️ Tour Guides</h3>
             <p>
@@ -2783,7 +2828,10 @@
         </article>
 
         <article class="scenario-card">
-          <div>
+          <div class="scenario-image-frame">
+            <img class="scenario-image" src="images/singing-mono.jpg" alt="Singer performs for friends at a karaoke gathering." width="1376" height="768" loading="lazy" decoding="async">
+          </div>
+          <div class="scenario-card-content">
             <div class="scenario-badge">MUSIC & BUSKING</div>
             <h3>🎤 Singing & Karaoke</h3>
             <p>
@@ -2796,7 +2844,10 @@
         </article>
 
         <article class="scenario-card">
-          <div>
+          <div class="scenario-image-frame">
+            <img class="scenario-image" src="images/warehouse-mono.jpg" alt="Warehouse supervisor uses a phone to coordinate a team." width="1376" height="768" loading="lazy" decoding="async">
+          </div>
+          <div class="scenario-card-content">
             <div class="scenario-badge">DISPATCH & LOGISTICS</div>
             <h3>🏭 Warehouse & Dispatch</h3>
             <p>
@@ -2809,7 +2860,10 @@
         </article>
 
         <article class="scenario-card">
-          <div>
+          <div class="scenario-image-frame">
+            <img class="scenario-image" src="images/sports-mono.jpg" alt="Event announcer speaks to a crowd beside a sports field PA speaker." width="1376" height="768" loading="lazy" decoding="async">
+          </div>
+          <div class="scenario-card-content">
             <div class="scenario-badge">SPORTS & EVENTS</div>
             <h3>🚨 Sports Days & Meets</h3>
             <p>
